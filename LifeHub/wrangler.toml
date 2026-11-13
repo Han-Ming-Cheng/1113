@@ -14,7 +14,3 @@ binding = "DB"
 database_name = "lifehub-db"
 database_id = "5139575f-6ae8-45ae-85a5-477aeb47d51a"
 migrations_dir = "migrations"
-
-[vars]
-# Add LIFF_ID only after configuring a LINE LIFF app.
-# Add PUBLIC_BASE_URL after deploying (for webhook and LIFF endpoint settings).
