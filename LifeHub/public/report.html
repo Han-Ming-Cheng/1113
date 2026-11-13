@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f7f8f5">
+  <title>LifeHub｜問題回報</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#294036;background:#f7f8f5}
+    *{box-sizing:border-box}body{margin:0}a{color:inherit}button,input,select,textarea{font:inherit}
+    .shell{max-width:980px;margin:auto;padding:0 25px 70px}
+    header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+    .brand{text-decoration:none;font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
+    .mark{display:grid;place-items:center;background:#315f4a;color:white;border-radius:13px;width:37px;height:37px}
+    .back{text-decoration:none;color:#597464;font-size:13px}
+    .hero{background:#e9f0e9;border-radius:26px;padding:38px 43px;position:relative;overflow:hidden}
+    .hero:after{content:"✳";position:absolute;right:45px;top:5px;font-size:140px;color:#d2e2d3;line-height:1}
+    .eyebrow{font-size:10px;font-weight:800;letter-spacing:2px;color:#7b9884}
+    h1{font-size:36px;margin:12px 0 8px;position:relative;z-index:1}
+    .hero p{font-size:14px;color:#6c8072;line-height:1.8;margin:0;position:relative;z-index:1}
+    .layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,.9fr);gap:22px;margin-top:24px;align-items:start}
+    .panel{background:white;border:1px solid #e8eee8;border-radius:20px;padding:27px;box-shadow:0 8px 28px #29403608}
+    .panel h2{font-size:18px;margin:0 0 8px}.muted{font-size:12px;color:#7e8f83;line-height:1.7;margin:0 0 22px}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:15px}.field{display:grid;gap:7px;margin-bottom:16px}.field.full{grid-column:1/-1}
+    label{font-size:12px;font-weight:700;color:#40594a}label small{font-weight:400;color:#89998d}
+    input,select,textarea{width:100%;border:1px solid #dce6dd;border-radius:11px;background:#fcfdfa;padding:12px 13px;color:#2d4335;outline-color:#729b7b;font-size:14px}
+    textarea{min-height:105px;resize:vertical;line-height:1.6}textarea.short{min-height:75px}
+    .actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:8px}.button{border:0;border-radius:11px;background:#416b50;color:white;padding:12px 16px;cursor:pointer;font-size:13px;font-weight:700}
+    .button.secondary{background:#eaf1e9;color:#41614a}.button:focus-visible,a:focus-visible{outline:3px solid #a2c9a4;outline-offset:2px}
+    .preview{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f8f3;border-radius:12px;padding:16px;color:#496253;font-size:12px;line-height:1.8;min-height:220px}
+    .status{font-size:12px;color:#416b50;min-height:1.5em;margin-top:13px}.steps{padding-left:20px;color:#667b6b;font-size:12px;line-height:2}
+    .note{font-size:11px;color:#8b998c;line-height:1.7;margin-top:17px}
+    @media(max-width:720px){.shell{padding:0 15px 40px}header{height:67px}.hero{padding:28px 24px}.hero:after{right:0;top:28px;font-size:92px}h1{font-size:29px}.hero p{max-width:290px;font-size:12px}.layout{grid-template-columns:1fr;gap:14px}.panel{padding:22px}.fields{grid-template-columns:1fr;gap:0}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header><a class="brand" href="index.html"><span class="mark">L</span>LifeHub</a><a class="back" href="slides.html">← 查看使用說明</a></header>
+    <main>
+      <section class="hero"><span class="eyebrow">WE'RE HERE TO HELP</span><h1>問題回報</h1><p>填寫遇到的狀況，複製整理好的文字，貼到 LifeHub LINE 官方帳號聊天視窗。</p></section>
+      <div class="layout">
+        <form class="panel" id="reportForm">
+          <h2>發生了什麼事？</h2><p class="muted">這份表單只在你的瀏覽器產生回報文字，不會自動送出或儲存。</p>
+          <div class="fields">
+            <div class="field"><label for="category">問題類型</label><select id="category"><option>無法登入</option><option>資料無法儲存</option><option>資料顯示異常</option><option>LINE 指令無回應</option><option>畫面或操作問題</option><option>其他</option></select></div>
+            <div class="field"><label for="tool">相關功能</label><select id="tool"><option>整體／不確定</option><option>記帳</option><option>待辦</option><option>喝水</option><option>購物清單</option><option>習慣打卡</option><option>LINE 聊天指令</option></select></div>
+            <div class="field"><label for="when">發生時間</label><input id="when" type="datetime-local"></div>
+            <div class="field"><label for="device">裝置／瀏覽器 <small>可選填</small></label><input id="device" maxlength="80" placeholder="例如 iPhone、LINE 內建瀏覽器"></div>
+            <div class="field full"><label for="description">問題描述</label><textarea id="description" maxlength="1000" placeholder="例如：新增一筆記帳後，重新開啟頁面卻看不到紀錄。" required></textarea></div>
+            <div class="field full"><label for="steps">重現步驟 <small>可選填</small></label><textarea class="short" id="steps" maxlength="1000" placeholder="例如：開啟記帳 → 輸入午餐 120 → 按新增 → 返回首頁。"></textarea></div>
+            <div class="field full"><label for="expected">預期結果 <small>可選填</small></label><input id="expected" maxlength="300" placeholder="例如：本月支出增加 120 元。"></div>
+          </div>
+          <div class="actions"><button class="button" type="submit">複製回報文字</button><button class="button secondary" type="button" id="share">分享文字</button><button class="button secondary" type="button" id="download">下載文字檔</button></div>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </form>
+        <aside class="panel"><h2>回報預覽</h2><p class="muted">文字會隨你的填寫內容更新。</p><div id="preview" class="preview"></div><ol class="steps"><li>填寫左側問題。</li><li>點「複製回報文字」。</li><li>開啟已加入的 LifeHub LINE 官方帳號聊天，貼上並送出。</li></ol><p class="note">請不要在問題描述中填入 Channel Secret、Access Token 或密碼。</p></aside>
+      </div>
+    </main>
+  </div>
+  <script>
+    const form=document.querySelector('#reportForm');
+    const field=id=>document.getElementById(id).value.trim();
+    const status=document.querySelector('#status');
+    const timestamp=new Date();
+    document.querySelector('#when').value=new Date(timestamp.getTime()-timestamp.getTimezoneOffset()*60000).toISOString().slice(0,16);
+    function reportText(){return [
+      'LifeHub 問題回報',
+      '問題類型：'+field('category'),
+      '相關功能：'+field('tool'),
+      '發生時間：'+(field('when')||'未填寫'),
+      '裝置／瀏覽器：'+(field('device')||'未填寫'),
+      '問題描述：'+(field('description')||'未填寫'),
+      '重現步驟：'+(field('steps')||'未填寫'),
+      '預期結果：'+(field('expected')||'未填寫')
+    ].join('\n')}
+    function refresh(){document.querySelector('#preview').textContent=reportText()}
+    form.addEventListener('input',refresh);form.addEventListener('change',refresh);refresh();
+    function valid(){if(field('description'))return true;document.querySelector('#description').focus();status.textContent='請先填寫問題描述。';return false}
+    async function copy(){const text=reportText();try{await navigator.clipboard.writeText(text);return true}catch{const area=document.createElement('textarea');area.value=text;document.body.append(area);area.select();const copied=document.execCommand('copy');area.remove();return copied}}
+    form.addEventListener('submit',async event=>{event.preventDefault();if(!valid())return;status.textContent=await copy()?'已複製，請貼到 LifeHub LINE 官方帳號聊天視窗。':'無法自動複製，請選取右側預覽文字手動複製。'});
+    document.querySelector('#share').addEventListener('click',async()=>{if(!valid())return;if(navigator.share){try{await navigator.share({text:reportText()});status.textContent='已開啟系統分享選單。';return}catch{}}status.textContent=await copy()?'裝置未提供分享功能，已改為複製文字。':'請選取右側預覽文字手動複製。'});
+    document.querySelector('#download').addEventListener('click',()=>{if(!valid())return;const url=URL.createObjectURL(new Blob([reportText()],{type:'text/plain;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='lifehub-問題回報.txt';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='已下載文字檔，可附在你的 LINE 回報中。'});
+  </script>
+</body>
+</html>
