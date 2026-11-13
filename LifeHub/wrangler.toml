@@ -1,6 +1,7 @@
 name = "lifehub-line-five-in-one"
 main = "src/index.ts"
 compatibility_date = "2026-11-13"
+keep_vars = true
 
 [assets]
 directory = "./public"
