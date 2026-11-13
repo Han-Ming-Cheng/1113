@@ -129,9 +129,52 @@ async function handleWebhook(req:Request,env:Env):Promise<Response>{
   }
   return new Response('OK');
 }
+async function handleAssistant(req:Request):Promise<Response>{
+  const origin=req.headers.get('origin');
+  if(origin&&origin!==new URL(req.url).origin)return fail('請從 LifeHub 頁面使用小助手。',403);
+  const key=req.headers.get('x-openai-api-key')?.trim()??'';
+  if(!key||key.length>500||/[\r\n]/.test(key))return fail('請先在小助手設定 OpenAI API Key。');
+  const raw=await req.text();
+  if(raw.length>12000)return fail('訊息太長。',413);
+  let data:{message?:unknown;history?:unknown};
+  try{data=JSON.parse(raw)}catch{return fail('訊息格式錯誤。')}
+  const message=typeof data.message==='string'?data.message.trim():'';
+  if(!message||message.length>500)return fail('請輸入 1–500 字的問題。');
+  const history=Array.isArray(data.history)?data.history.slice(-6).filter((item:unknown):item is {role:string;text:string}=>{
+    if(!item||typeof item!=='object')return false;
+    const row=item as Record<string,unknown>;
+    return (row.role==='user'||row.role==='assistant')&&typeof row.text==='string'&&row.text.length<=500;
+  }):[];
+  const conversation=history.map(item=>`${item.role==='user'?'使用者':'助手'}：${item.text}`).join('\n');
+  const input=`${conversation?conversation+'\n':''}使用者：${message}`;
+  let upstream:Response;
+  try{
+    upstream=await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',
+      headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},
+      body:JSON.stringify({
+        model:'gpt-6-luna',
+        reasoning:{effort:'low'},
+        instructions:'你是 LifeHub 五合一生活助手，請用繁體中文簡短回答。LifeHub 有記帳、待辦、喝水、購物清單、習慣打卡；使用者可點首頁卡片操作，也可在 LINE 聊天輸入指令。你只能提供說明與建議，不能宣稱已替使用者新增或修改資料。不要索取 API Key、密碼或 LINE 憑證。',
+        input,
+        store:false,
+        max_output_tokens:400,
+      }),
+    });
+  }catch{return fail('AI 服務暫時無法連線，請稍後再試。',502)}
+  if(!upstream.ok){
+    if(upstream.status===401)return fail('OpenAI API Key 無效，請重新設定。',401);
+    if(upstream.status===429)return fail('OpenAI 額度或速率限制已達上限。',429);
+    return fail('OpenAI 無法完成請求，請確認帳號可使用 gpt-6-luna。',502);
+  }
+  const result=await upstream.json() as {output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>};
+  const answer=result.output?.filter(item=>item.type==='message').flatMap(item=>item.content??[]).filter(item=>item.type==='output_text').map(item=>item.text??'').join('\n').trim()??'';
+  return answer?json({answer:answer.slice(0,3000)}):fail('AI 未回傳文字，請換個問法再試。',502);
+}
 export default { async fetch(req:Request,env:Env):Promise<Response>{
   const url=new URL(req.url);
   if(url.pathname==='/webhook'&&req.method==='POST')return handleWebhook(req,env);
+  if(url.pathname==='/api/assistant'&&req.method==='POST')return handleAssistant(req);
   if(url.pathname==='/health')return json({
     ok:true,
     diagnosticVersion:'bindings-20261113',

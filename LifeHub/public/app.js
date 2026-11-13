@@ -1,4 +1,5 @@
 const $=s=>document.querySelector(s);let token='',state=null,liffProfile=null,browserDemo=false;const isDemo=()=>token==='lifehub-local-demo-token';
+window.LifeHubSummary=()=>state;
 const reportKey='lifehub:lastError';
 function clearError(){const notice=$('#errorNotice');if(notice)notice.hidden=true;try{sessionStorage.removeItem(reportKey)}catch{}}
 function showError(error,fallbackTool='整體／不確定'){

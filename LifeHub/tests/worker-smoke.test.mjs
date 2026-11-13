@@ -141,6 +141,36 @@ test('public Worker without LINE config rejects shared demo identity', async () 
   assert.equal(response.status, 403);
 });
 
+test('assistant proxies a user key only for the current request and returns text', async () => {
+  const { env } = mockEnv();
+  const url = 'https://lifehub.test/api/assistant';
+  const missing = await worker.fetch(new Request(url, { method: 'POST', body: JSON.stringify({ message: '怎麼記帳？' }) }), env);
+  assert.equal(missing.status, 400);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (target, options) => {
+    assert.equal(target, 'https://api.openai.com/v1/responses');
+    assert.equal(options.headers.authorization, 'Bearer sk-test-private');
+    const body = JSON.parse(options.body);
+    assert.equal(body.model, 'gpt-6-luna');
+    assert.equal(body.store, false);
+    assert.match(body.input, /怎麼記帳？/);
+    return Response.json({ output: [{ type: 'message', content: [{ type: 'output_text', text: '點首頁的記帳卡片。' }] }] });
+  };
+  try {
+    const response = await worker.fetch(new Request(url, {
+      method: 'POST',
+      headers: { origin: 'https://lifehub.test', 'x-openai-api-key': 'sk-test-private' },
+      body: JSON.stringify({ message: '怎麼記帳？' }),
+    }), env);
+    assert.equal(response.status, 200);
+    const text = await response.text();
+    assert.match(text, /點首頁的記帳卡片/);
+    assert.equal(text.includes('sk-test-private'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('LIFF API uses verified LINE sub instead of submitted userId', async () => {
   const { env, statements } = mockEnv();
   env.LINE_CHANNEL_ID = 'login-channel';

@@ -6,9 +6,12 @@ import vm from 'node:vm';
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const demoScript = readFileSync(new URL('../public/browser-demo.js', import.meta.url), 'utf8');
 const appScript = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
+const assistantScript = readFileSync(new URL('../public/assistant-ui.js', import.meta.url), 'utf8');
 
 test('homepage opens a tool in browser Demo and links to the report form', async () => {
   assert.ok(html.indexOf('browser-demo.js') < html.indexOf('app.js'));
+  assert.ok(html.indexOf('app.js') < html.indexOf('assistant-ui.js'));
+  assert.match(html, /id="assistantLauncher"/);
   assert.match(html, /href="report\.html">填寫問題回報/);
   const handlers = new Map(), elements = new Map(), storage = new Map();
   function element(selector) {
@@ -37,4 +40,40 @@ test('homepage opens a tool in browser Demo and links to the report form', async
   handlers.get('#cards:click')({ target: { closest: () => ({ dataset: { tool: 'expense' } }) } });
   assert.equal(element('#modal').hidden, false);
   assert.match(element('#sheetContent').innerHTML, /記帳/);
+});
+
+test('assistant gives local help without a key and clears an entered key from the field', async () => {
+  const handlers = new Map(), elements = new Map(), bubbles = [];
+  function element(selector) {
+    if (!elements.has(selector)) elements.set(selector, {
+      hidden: selector === '#assistantPanel',
+      value: '', textContent: '', dataset: {},
+      disabled: false, scrollTop: 0, scrollHeight: 0,
+      setAttribute() {},
+      addEventListener(type, handler) { handlers.set(selector + ':' + type, handler) },
+      append(node) { bubbles.push(node) },
+    });
+    return elements.get(selector);
+  }
+  const context = vm.createContext({
+    window: { LifeHubSummary: () => ({ expenseTotal: 120, todos: [], waterToday: 300, waterGoal: 2000, shopping: [], habits: [] }) },
+    document: { querySelector: element, querySelectorAll: () => [], createElement: () => ({ className: '', textContent: '' }) },
+    fetch: async (url, options) => {
+      assert.equal(url, 'api/assistant');
+      assert.equal(options.headers['x-openai-api-key'], 'sk-test-private');
+      return Response.json({ answer: '可以從首頁開始。' });
+    },
+    Response,
+  });
+  vm.runInContext(assistantScript, context);
+  element('#assistantInput').value = '今日摘要';
+  handlers.get('#assistantForm:submit')({ preventDefault() {} });
+  assert.ok(bubbles.some(item => item.textContent.includes('喝水 300/2000 ml')));
+  element('#assistantKeyInput').value = 'sk-test-private';
+  handlers.get('#assistantKeyForm:submit')({ preventDefault() {} });
+  assert.equal(element('#assistantKeyInput').value, '');
+  element('#assistantInput').value = '怎麼開始？';
+  handlers.get('#assistantForm:submit')({ preventDefault() {} });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.ok(bubbles.some(item => item.textContent === '可以從首頁開始。'));
 });

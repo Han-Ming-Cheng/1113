@@ -8,6 +8,10 @@
 
 交作業可直接開啟 `https://lifehub-line-five-in-one.han890131.workers.dev/?demo=1`，強制進入五項工具的瀏覽器 Demo。若雲端部署尚未更新，也可直接開啟 `public/index.html` 體驗同一個前端 Demo；資料保存在目前瀏覽器。這些 Demo 資料不會寫入 D1。
 
+## LifeHub 小助手
+
+主畫面右下角的「✳ 小助手」可直接回答五個工具的操作問題與查詢目前畫面的今日摘要。展開「設定自己的 OpenAI API Key」後，輸入自己的 Key，可透過 Worker 向 OpenAI Responses API 自由提問；模型固定為 `gpt-6-luna`。Key 僅存在目前頁面的記憶體，重新整理即清除，不寫入 Git、D1、localStorage 或網址。請求由 Worker 轉送，回應不儲存；沒有 Key 時仍可使用內建操作說明。此功能尚未使用真實 Key 在正式站驗證。
+
 ## 本機 Demo（零 npm 依賴）
 
 需求：Python 3.9+。不需要安裝 npm 套件，也不需要網路連線：
