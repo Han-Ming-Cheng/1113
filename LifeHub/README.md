@@ -4,6 +4,8 @@
 
 手機優先的 LINE LIFF 生活工具作品：記帳、待辦、喝水、購物清單、習慣打卡。Cloudflare Worker 提供頁面/API/Webhook，D1 保存經 LINE 驗證使用者的正式資料。LINE 尚未設定完成時，公開首頁會啟用瀏覽器 Demo，五個工具可直接操作，資料只保存在使用者自己的瀏覽器。正式 API 不接受前端指定 userId。
 
+版本檢查：開啟 `/health`，確認 `appRevision` 為 `2026.11.13.2`，或查看首頁底部版本號。若仍是舊版，請檢查 Cloudflare Deployments 最新建置狀態。
+
 作品入口：`https://lifehub-line-five-in-one.han890131.workers.dev/`；問題回報：`/report.html`；互動說明簡報：`/slides.html`。
 
 交作業可直接開啟 `https://lifehub-line-five-in-one.han890131.workers.dev/?demo=1`，強制進入五項工具的瀏覽器 Demo。若雲端部署尚未更新，也可直接開啟 `public/index.html` 體驗同一個前端 Demo；資料保存在目前瀏覽器。這些 Demo 資料不會寫入 D1。

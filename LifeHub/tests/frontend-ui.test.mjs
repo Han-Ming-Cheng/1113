@@ -12,6 +12,8 @@ test('homepage opens a tool in browser Demo and links to the report form', async
   assert.ok(html.indexOf('browser-demo.js') < html.indexOf('app.js'));
   assert.ok(html.indexOf('app.js') < html.indexOf('assistant-ui.js'));
   assert.match(html, /id="assistantLauncher"/);
+  assert.match(html, /點進去可修改／刪除紀錄/);
+  assert.match(html, /版本 2026\.11\.13\.2/);
   assert.match(html, /class="assistant-settings" open/);
   assert.match(html, /id="assistantCloudflareFields" class="assistant-custom-fields"/);
   assert.match(html, /id="assistantKeyInput" type="password"/);

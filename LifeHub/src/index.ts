@@ -234,6 +234,7 @@ export default { async fetch(req:Request,env:Env):Promise<Response>{
   if(url.pathname==='/health')return json({
     ok:true,
     diagnosticVersion:'bindings-20261113',
+    appRevision:'2026.11.13.2',
     mode:env.LINE_CHANNEL_ID?'line-auth':isLocal(req)?'local-demo':'unconfigured',
     liffConfigured:!!env.LIFF_ID,
     messagingConfigured:!!(env.LINE_CHANNEL_SECRET&&env.LINE_CHANNEL_ACCESS_TOKEN),
