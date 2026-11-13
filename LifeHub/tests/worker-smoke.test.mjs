@@ -16,7 +16,7 @@ function mockEnv() {
               return {
                 run: async () => ({ success: true }),
                 all: async () => ({ results: [] }),
-                first: async () => null,
+                first: async () => sql.includes('FROM water_logs') ? { total: 300 } : null,
               };
             },
           };
@@ -46,6 +46,13 @@ test('health, static assets, auth guard and webhook signature guard', async () =
   assert.equal(await (await call(env, '/')).text(), 'static asset');
   assert.equal((await call(env, '/api/state', 'GET', undefined, false)).status, 401);
   assert.equal((await call(env, '/webhook', 'POST', {})).status, 401);
+});
+
+test('state reads the single water total returned by D1 first()', async () => {
+  const { env } = mockEnv();
+  const response = await call(env, '/api/state');
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).waterToday, 300);
 });
 
 test('five tool API mutations reach D1, including PUT water goal', async () => {

@@ -50,8 +50,8 @@ async function dataApi(req: Request, env: Env, ctx: Ctx): Promise<Response> {
       while (dates.has(d.toISOString().slice(0,10))) { streak++; d.setUTCDate(d.getUTCDate()-1); }
       return {...h, streak, checkedToday: dates.has(day())};
     }));
-    const water = waterRows.results[0] as {total:number}; const goal=setting?.daily_goal ?? 2000;
-    return json({ demo:ctx.demo, expenses:expenses.results, expenseTotal:expSum?.total??0, todos:todos.results, waterToday:water?.total??0, waterGoal:goal, shopping:shopping.results, habits:enriched, today:day(), month:month() });
+    const goal=setting?.daily_goal ?? 2000;
+    return json({ demo:ctx.demo, expenses:expenses.results, expenseTotal:expSum?.total??0, todos:todos.results, waterToday:waterRows?.total??0, waterGoal:goal, shopping:shopping.results, habits:enriched, today:day(), month:month() });
   }
   const body = ['POST','PATCH','PUT'].includes(method) ? await req.json().catch(()=>null) as Record<string, unknown>|null : null;
   if (!body && ['POST','PATCH','PUT'].includes(method)) return fail('無法讀取資料。');
