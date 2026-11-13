@@ -44,7 +44,7 @@ test('health, static assets, auth guard and webhook signature guard', async () =
   assert.equal(health.status, 200);
   const healthData = await health.json();
   assert.equal(healthData.mode, 'local-demo');
-  assert.equal(healthData.appRevision, '2026.11.13.2');
+  assert.equal(healthData.appRevision, '2026.11.13.3');
   assert.equal(await (await call(env, '/')).text(), 'static asset');
   assert.equal((await call(env, '/api/state', 'GET', undefined, false)).status, 401);
   assert.equal((await call(env, '/webhook', 'POST', {})).status, 401);

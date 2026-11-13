@@ -4,7 +4,7 @@
 
 手機優先的 LINE LIFF 生活工具作品：記帳、待辦、喝水、購物清單、習慣打卡。Cloudflare Worker 提供頁面/API/Webhook，D1 保存經 LINE 驗證使用者的正式資料。LINE 尚未設定完成時，公開首頁會啟用瀏覽器 Demo，五個工具可直接操作，資料只保存在使用者自己的瀏覽器。正式 API 不接受前端指定 userId。
 
-版本檢查：開啟 `/health`，確認 `appRevision` 為 `2026.11.13.2`，或查看首頁底部版本號。若仍是舊版，請檢查 Cloudflare Deployments 最新建置狀態。
+版本檢查：開啟 `/health`，確認 `appRevision` 為 `2026.11.13.3`，或查看首頁底部版本號。若仍是舊版，請檢查 Cloudflare Deployments 最新建置狀態。
 
 展示版驗收：在 `/?demo=1` 新增一筆記帳後，點記帳卡片，可在該筆紀錄旁看到「修改」與「刪除」；小助手的設定區預設展開，Cloudflare 選項可輸入 Account ID 與自己的 Workers AI API Token。若正式頁面沒有這些欄位，代表目前 Production 部署尚未載入此版本。
 
