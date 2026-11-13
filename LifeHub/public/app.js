@@ -51,6 +51,44 @@ async function api(path,method='GET',data){
   return result;
 }
 async function refresh(){try{state=await api('/state');$('#expenseTotal').textContent='$'+Number(state.expenseTotal).toLocaleString();$('#todoCount').innerHTML=`${state.todos.filter(x=>!x.done).length} <small>件待辦</small>`;$('#waterSummary').innerHTML=`${state.waterToday.toLocaleString()} <small>ml</small>`;$('#waterHint').textContent=`目標 ${state.waterGoal.toLocaleString()} ml　→`;$('#waterMini').style.width=Math.min(100,state.waterToday/state.waterGoal*100)+'%';$('#shopCount').innerHTML=`${state.shopping.filter(x=>!x.checked).length} <small>項目</small>`;$('#habitCount').innerHTML=`${state.habits.length} <small>個習慣</small>`;if(state.demo&&!document.querySelector('.mode'))$('.brand').insertAdjacentHTML('beforeend',browserDemo?'<span class="mode">瀏覽器 Demo · 僅此裝置</span>':'<span class="mode">本機 Demo</span>');clearError()}catch(e){showError(e)}}
+window.LifeHubRunAction=async action=>{
+  const title=String(action?.title||'').trim().slice(0,120);
+  if(!state)throw Error('資料尚未載入，請稍後再試。');
+  if(action.type==='expense'){
+    const amount=Number(action.amount);
+    if(!title||!Number.isSafeInteger(amount)||amount<1)throw Error('請提供項目與正整數金額。');
+    await api('/expenses','POST',{title,amount});
+  }else if(action.type==='todo'){
+    if(!title)throw Error('請提供待辦內容。');
+    await api('/todos','POST',{title});
+  }else if(action.type==='water'){
+    const amount=Number(action.amount);
+    if(!Number.isSafeInteger(amount)||amount<1||amount>5000)throw Error('喝水量需介於 1–5000 ml。');
+    await api('/water','POST',{amount});
+  }else if(action.type==='goal'){
+    const goal=Number(action.amount);
+    if(!Number.isSafeInteger(goal)||goal<250||goal>10000)throw Error('每日目標需介於 250–10000 ml。');
+    await api('/water/goal','PUT',{goal});
+  }else if(action.type==='shopping'){
+    if(!title)throw Error('請提供購物品項。');
+    await api('/shopping','POST',{title});
+  }else if(action.type==='habit'){
+    if(!title)throw Error('請提供習慣名稱。');
+    await api('/habits','POST',{title});
+  }else if(action.type==='check'){
+    if(!title)throw Error('請提供習慣名稱。');
+    let habit=state.habits.find(item=>item.title===title);
+    if(!habit){
+      await api('/habits','POST',{title});
+      state=await api('/state');
+      habit=state.habits.find(item=>item.title===title);
+    }
+    if(!habit)throw Error('找不到要打卡的習慣。');
+    await api(`/habits/${encodeURIComponent(habit.id)}/check`,'POST',{});
+  }else throw Error('小助手不支援這個操作。');
+  await refresh();
+  return action.type==='check'?`已完成「${title}」今日打卡。`:action.type==='water'?`已記錄喝水 ${action.amount} ml。`:action.type==='goal'?`每日喝水目標已設為 ${action.amount} ml。`:action.type==='expense'?`已記帳「${title}」$${action.amount}。`:`已新增「${title}」。`;
+};
 function toast(s){const t=$('#toast');t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}function open(title,sub,html){$('#sheetContent').innerHTML=`<h2>${title}</h2><p class="sub">${sub}</p>${html}`;$('#modal').hidden=false}function close(){$('#modal').hidden=true}document.addEventListener('click',e=>{if(e.target.matches('[data-close]'))close()});
 async function act(fn){try{await fn();await refresh();const name=$('#sheetContent h2')?.textContent;const tool={'記帳':'expense','待辦清單':'todo','喝水進度':'water','購物清單':'shopping','習慣打卡':'habit'}[name];if(!$('#modal').hidden&&tool)showTool(tool)}catch(e){showError(e,$('#sheetContent h2')?.textContent||'整體／不確定')}}const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function form(placeholder,button,extra=''){return `<form class="form-row" id="entry"><input name="title" placeholder="${placeholder}" required maxlength="120">${extra}<button class="btn">${button}</button></form>`}

@@ -40,6 +40,17 @@ test('homepage opens a tool in browser Demo and links to the report form', async
   handlers.get('#cards:click')({ target: { closest: () => ({ dataset: { tool: 'expense' } }) } });
   assert.equal(element('#modal').hidden, false);
   assert.match(element('#sheetContent').innerHTML, /記帳/);
+  await context.window.LifeHubRunAction({ type: 'expense', title: '午餐', amount: 120 });
+  await context.window.LifeHubRunAction({ type: 'todo', title: '買牛奶' });
+  await context.window.LifeHubRunAction({ type: 'water', amount: 300 });
+  await context.window.LifeHubRunAction({ type: 'shopping', title: '雞蛋' });
+  await context.window.LifeHubRunAction({ type: 'check', title: '運動' });
+  const updated = vm.runInContext('state', context);
+  assert.equal(updated.expenseTotal, 120);
+  assert.equal(updated.todos[0].title, '買牛奶');
+  assert.equal(updated.waterToday, 300);
+  assert.equal(updated.shopping[0].title, '雞蛋');
+  assert.equal(updated.habits[0].checkedToday, true);
 });
 
 test('assistant gives local help without a key and clears an entered key from the field', async () => {
@@ -60,12 +71,14 @@ test('assistant gives local help without a key and clears an entered key from th
     document: { querySelector: element, querySelectorAll: () => [], createElement: () => ({ className: '', textContent: '' }) },
     fetch: async (url, options) => {
       assert.equal(url, 'api/assistant');
-      assert.equal(options.headers['x-openai-api-key'], 'sk-test-private');
+      assert.equal(options.headers['x-assistant-api-key'], 'sk-test-private');
+      assert.equal(JSON.parse(options.body).provider, 'openai');
       return Response.json({ answer: '可以從首頁開始。' });
     },
     Response,
   });
   vm.runInContext(assistantScript, context);
+  element('#assistantProvider').value = 'openai';
   element('#assistantInput').value = '今日摘要';
   handlers.get('#assistantForm:submit')({ preventDefault() {} });
   assert.ok(bubbles.some(item => item.textContent.includes('喝水 300/2000 ml')));
@@ -76,4 +89,48 @@ test('assistant gives local help without a key and clears an entered key from th
   handlers.get('#assistantForm:submit')({ preventDefault() {} });
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.ok(bubbles.some(item => item.textContent === '可以從首頁開始。'));
+  element('#assistantProvider').value = 'gemini';
+  handlers.get('#assistantProvider:change')();
+  assert.match(element('#assistantKeyStatus').textContent, /Google Gemini/);
+  element('#assistantInput').value = '怎麼開始？';
+  handlers.get('#assistantForm:submit')({ preventDefault() {} });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.match(bubbles.at(-1).textContent, /幫你記錄資料/);
+});
+
+test('assistant asks for confirmation before saving a parsed expense', async () => {
+  const handlers = new Map(), elements = new Map(), nodes = [], actions = [];
+  function element(selector) {
+    if (!elements.has(selector)) elements.set(selector, {
+      hidden: selector === '#assistantPanel', value: '', textContent: '',
+      disabled: false, scrollTop: 0, scrollHeight: 0,
+      setAttribute() {},
+      addEventListener(type, handler) { handlers.set(selector + ':' + type, handler) },
+      append(node) { nodes.push(node) },
+    });
+    return elements.get(selector);
+  }
+  const context = vm.createContext({
+    window: { LifeHubRunAction: async action => { actions.push(action); return '已記帳。' } },
+    document: {
+      querySelector: element,
+      querySelectorAll: () => [],
+      createElement: () => ({
+        className: '', textContent: '', children: [], listeners: {},
+        append(...children) { this.children.push(...children) },
+        addEventListener(type, handler) { this.listeners[type] = handler },
+        remove() {},
+      }),
+    },
+  });
+  vm.runInContext(assistantScript, context);
+  element('#assistantInput').value = '記帳 午餐 120';
+  handlers.get('#assistantForm:submit')({ preventDefault() {} });
+  assert.equal(actions.length, 0);
+  const card = nodes.find(node => node.className === 'assistant-action');
+  assert.match(card.children[0].textContent, /午餐.*120/);
+  await card.children[1].listeners.click();
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].type, 'expense');
+  assert.equal(actions[0].amount, 120);
 });

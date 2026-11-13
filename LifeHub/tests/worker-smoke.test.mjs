@@ -159,8 +159,8 @@ test('assistant proxies a user key only for the current request and returns text
   try {
     const response = await worker.fetch(new Request(url, {
       method: 'POST',
-      headers: { origin: 'https://lifehub.test', 'x-openai-api-key': 'sk-test-private' },
-      body: JSON.stringify({ message: '怎麼記帳？' }),
+      headers: { origin: 'https://lifehub.test', 'x-assistant-api-key': 'sk-test-private' },
+      body: JSON.stringify({ message: '怎麼記帳？', provider: 'openai' }),
     }), env);
     assert.equal(response.status, 200);
     const text = await response.text();
@@ -169,6 +169,43 @@ test('assistant proxies a user key only for the current request and returns text
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('assistant supports Gemini and Claude with fixed upstream hosts', async () => {
+  const { env } = mockEnv();
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (target, options) => {
+    calls.push({ target, options });
+    if (target.includes('generativelanguage.googleapis.com')) return Response.json({ candidates: [{ content: { parts: [{ text: 'Gemini 回答' }] } }] });
+    if (target.includes('api.anthropic.com')) return Response.json({ content: [{ type: 'text', text: 'Claude 回答' }] });
+    throw Error('unexpected upstream');
+  };
+  try {
+    for (const [provider, answer] of [['gemini', 'Gemini 回答'], ['anthropic', 'Claude 回答']]) {
+      const response = await worker.fetch(new Request('https://lifehub.test/api/assistant', {
+        method: 'POST',
+        headers: { 'x-assistant-api-key': 'private-test-key', origin: 'https://lifehub.test' },
+        body: JSON.stringify({ provider, message: '五個功能是什麼？' }),
+      }), env);
+      assert.equal(response.status, 200);
+      const text = await response.text();
+      assert.match(text, new RegExp(answer));
+      assert.equal(text.includes('private-test-key'), false);
+    }
+    assert.equal(calls[0].target, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
+    assert.equal(calls[0].options.headers['x-goog-api-key'], 'private-test-key');
+    assert.match(JSON.parse(calls[0].options.body).contents[0].parts[0].text, /五個功能/);
+    assert.equal(calls[1].target, 'https://api.anthropic.com/v1/messages');
+    assert.equal(calls[1].options.headers.authorization, 'Bearer private-test-key');
+    assert.equal(JSON.parse(calls[1].options.body).model, 'claude-haiku-5-5');
+    const invalid = await worker.fetch(new Request('https://lifehub.test/api/assistant', {
+      method: 'POST', headers: { 'x-assistant-api-key': 'private-test-key' },
+      body: JSON.stringify({ provider: 'custom', message: '你好' }),
+    }), env);
+    assert.equal(invalid.status, 400);
+    assert.equal(calls.length, 2);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('LIFF API uses verified LINE sub instead of submitted userId', async () => {
