@@ -12,7 +12,11 @@ function showError(error,fallbackTool='整體／不確定'){
   window.scrollTo(0,0);
 }
 async function boot(){
-  if(window.LIFF_ID&&window.LIFEHUB_AUTH_READY){
+  const forceDemo=new URLSearchParams(location.search).get('demo')==='1';
+  if(forceDemo){
+    browserDemo=true;
+    $('.hero p').textContent='立即體驗五個工具。Demo 資料只保存在這個瀏覽器。';
+  }else if(window.LIFF_ID&&window.LIFEHUB_AUTH_READY){
     if(!window.liff){showError(new Error('LIFF SDK 載入失敗，請重新開啟。'));return}
     try{
       await liff.init({liffId:window.LIFF_ID});
@@ -60,4 +64,4 @@ $('#modal').addEventListener('click',e=>{const quick=e.target.closest('[data-qui
 $('#cards').addEventListener('click',e=>{const card=e.target.closest('[data-tool]');if(card)showTool(card.dataset.tool)});
 $('#modal').addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(e.target.id==='entry'){const tool=$('#sheetContent h2').textContent;act(async()=>{if(tool==='記帳')await api('/expenses','POST',{title:d.title,amount:Number(d.amount)});if(tool==='待辦清單')await api('/todos','POST',{title:d.title});if(tool==='購物清單')await api('/shopping','POST',{title:d.title});if(tool==='習慣打卡')await api('/habits','POST',{title:d.title});showTool({記帳:'expense',待辦清單:'todo',購物清單:'shopping',習慣打卡:'habit'}[tool]);toast('已新增 ✦')})}if(e.target.id==='waterEntry')act(()=>api('/water','POST',{amount:Number(d.amount)}).then(()=>{showTool('water');toast('喝水紀錄已更新')}));if(e.target.id==='goalEntry')act(()=>api('/water/goal','PUT',{goal:Number(d.goal)}).then(()=>{showTool('water');toast('每日目標已更新')}))});
 $('#modal').addEventListener('click',e=>{const t=e.target.closest('[data-toggle]'),del=e.target.closest('[data-delete]'),check=e.target.closest('[data-check]'),water=e.target.closest('[data-water]');if(t)act(()=>api(`/${t.dataset.toggle==='todo'?'todos':'shopping'}/${t.dataset.id}`,'PATCH',t.dataset.toggle==='todo'?{done:t.checked}:{checked:t.checked}).then(()=>showTool(t.dataset.toggle==='todo'?'todo':'shopping')));if(del)act(()=>api(`/${del.dataset.delete==='todo'?'todos':del.dataset.delete==='shopping'?'shopping':'habits'}/${del.dataset.id}`,'DELETE').then(()=>{showTool(del.dataset.delete==='todo'?'todo':del.dataset.delete==='shopping'?'shopping':'habit');toast('已刪除')}));if(check)act(()=>api(`/habits/${check.dataset.check}/check`,'POST',{}).then(()=>{showTool('habit');toast('今日打卡成功 ✦')}));if(water)act(()=>api('/water','POST',{amount:Number(water.dataset.water)}).then(()=>{showTool('water');toast('已記錄喝水 ✦')}))});
-$('#helpLink').onclick=()=>location.href='/slides.html#howto';$('#report').onclick=()=>location.href='/report.html';$('#errorRetry').onclick=()=>location.reload();window.addEventListener('error',()=>showError(new Error('畫面發生錯誤，請重新載入後再試。')));window.addEventListener('unhandledrejection',()=>showError(new Error('操作未完成，請重新載入後再試。')));boot();
+$('#helpLink').onclick=()=>location.href='slides.html#howto';$('#report').onclick=()=>location.href='report.html';$('#errorRetry').onclick=()=>location.reload();window.addEventListener('error',()=>showError(new Error('畫面發生錯誤，請重新載入後再試。')));window.addEventListener('unhandledrejection',()=>showError(new Error('操作未完成，請重新載入後再試。')));boot();

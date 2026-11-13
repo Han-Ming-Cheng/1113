@@ -6,6 +6,8 @@
 
 作品入口：`https://lifehub-line-five-in-one.han890131.workers.dev/`；問題回報：`/report.html`；互動說明簡報：`/slides.html`。
 
+交作業可直接開啟 `https://lifehub-line-five-in-one.han890131.workers.dev/?demo=1`，強制進入五項工具的瀏覽器 Demo。若雲端部署尚未更新，也可直接開啟 `public/index.html` 體驗同一個前端 Demo；資料保存在目前瀏覽器。這些 Demo 資料不會寫入 D1。
+
 ## 本機 Demo（零 npm 依賴）
 
 需求：Python 3.9+。不需要安裝 npm 套件，也不需要網路連線：
