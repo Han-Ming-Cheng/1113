@@ -3,357 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#10110f">
-  <title>核力量檔案｜2026 世界核彈頭地圖</title>
+  <meta name="theme-color" content="#f7f8f5">
+  <meta name="description" content="LifeHub 五合一智慧生活助手：記帳、待辦、喝水、購物清單與習慣打卡。">
+  <title>LifeHub｜生活有序一點</title>
   <style>
-    :root {
-      color-scheme: dark;
-      --ink: #f2eee5;
-      --muted: #a9a397;
-      --faint: #77756c;
-      --gold: #d7b47b;
-      --line: #ffffff1a;
-      --panel: #151612e8;
-      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html, body { width: 100%; min-height: 100%; margin: 0; }
-    body {
-      min-height: 100vh;
-      overflow-x: hidden;
-      color: var(--ink);
-      background:
-        radial-gradient(ellipse at 50% 45%, #29251d 0%, #171713 47%, #10110f 100%);
-    }
-    body::before {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      content: "";
-      opacity: .13;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.23'/%3E%3C/svg%3E");
-      mix-blend-mode: screen;
-    }
-    .shell { position: relative; z-index: 1; width: min(100% - 64px, 1440px); margin: 0 auto; }
-    header {
-      min-height: 106px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      border-bottom: 1px solid var(--line);
-    }
-    .brand { display: flex; align-items: center; gap: 14px; }
-    .brand-mark {
-      width: 36px; height: 36px; display: grid; place-items: center;
-      border: 1px solid #d7b47b7a; border-radius: 50%;
-      color: var(--gold); font-size: 16px;
-      box-shadow: 0 0 24px #d7b47b1c, inset 0 0 15px #d7b47b0d;
-    }
-    .brand-name { font-size: 12px; letter-spacing: .19em; color: #e9dfcc; }
-    .brand-sub { margin-top: 4px; font-size: 9px; letter-spacing: .2em; color: var(--faint); }
-    .edition { text-align: right; color: var(--muted); font-size: 10px; letter-spacing: .16em; }
-    .edition strong { color: var(--gold); font-weight: 500; }
-    .intro {
-      display: flex; justify-content: space-between; align-items: end;
-      gap: 24px; padding: 42px 0 24px;
-    }
-    .eyebrow { color: var(--gold); font-size: 10px; letter-spacing: .23em; text-transform: uppercase; }
-    h1 { margin: 12px 0 0; font-size: clamp(27px, 4vw, 46px); font-weight: 500; letter-spacing: .055em; }
-    .subtitle { margin: 10px 0 0; color: var(--muted); font-size: 13px; letter-spacing: .04em; }
-    .stats { display: flex; gap: clamp(22px, 5vw, 72px); padding-bottom: 3px; }
-    .stat { min-width: 90px; }
-    .stat-label { color: var(--faint); font-size: 9px; letter-spacing: .16em; }
-    .stat-value { margin-top: 6px; color: #f3e6cf; font-variant-numeric: tabular-nums; font-size: 25px; letter-spacing: .04em; }
-    .stat-unit { margin-left: 5px; color: var(--muted); font-size: 10px; }
-    .map-frame {
-      position: relative;
-      min-height: 390px;
-      aspect-ratio: 1.93 / 1;
-      border: 1px solid #d8c9a914;
-      background:
-        radial-gradient(ellipse at 50% 48%, #34302752, #17171322 68%),
-        linear-gradient(180deg, #ffffff03, transparent 35%);
-      box-shadow: inset 0 0 70px #00000035, 0 24px 80px #00000028;
-      overflow: hidden;
-    }
-    .map-frame::before, .map-frame::after {
-      position: absolute; z-index: 2; width: 18px; height: 18px;
-      content: ""; pointer-events: none;
-    }
-    .map-frame::before { top: -1px; left: -1px; border-top: 1px solid var(--gold); border-left: 1px solid var(--gold); }
-    .map-frame::after { right: -1px; bottom: -1px; border-right: 1px solid var(--gold); border-bottom: 1px solid var(--gold); }
-    .map-svg { display: block; width: 100%; height: 100%; }
-    .graticule { fill: none; stroke: #e4d4b40c; stroke-width: .7; }
-    .sphere { fill: #151612; stroke: #d4c09c1c; stroke-width: 1; }
-    .country {
-      stroke: #181713;
-      stroke-width: .65px;
-      vector-effect: non-scaling-stroke;
-      transition: fill .2s ease, filter .2s ease, stroke .2s ease;
-      cursor: crosshair;
-      outline: none;
-    }
-    .country:hover, .country:focus {
-      stroke: #f1d9ac;
-      stroke-width: 1.5px;
-      filter: brightness(1.32) drop-shadow(0 0 5px #e4bc75a8);
-    }
-    .country:focus-visible { stroke: #fff1d2; stroke-width: 2px; }
-    .map-loading {
-      position: absolute; inset: 0; display: grid; place-items: center;
-      color: var(--muted); font-size: 12px; letter-spacing: .16em;
-    }
-    .map-loading[hidden] { display: none; }
-    .map-error { max-width: 360px; padding: 24px; text-align: center; line-height: 1.8; }
-    .map-error strong { display: block; color: var(--gold); font-weight: 500; }
-    .tooltip {
-      position: fixed; z-index: 5; min-width: 190px; padding: 13px 15px;
-      pointer-events: none; opacity: 0; transform: translateY(5px);
-      border: 1px solid #d7b47b52; background: #12130ff2;
-      box-shadow: 0 12px 36px #0009; backdrop-filter: blur(12px);
-      transition: opacity .12s ease, transform .12s ease;
-    }
-    .tooltip.visible { opacity: 1; transform: translateY(0); }
-    .tip-kicker { color: var(--gold); font-size: 8px; letter-spacing: .19em; }
-    .tip-country { margin-top: 5px; font-size: 15px; }
-    .tip-count { margin-top: 8px; color: #ead7b6; font-size: 12px; font-variant-numeric: tabular-nums; }
-    .tip-count strong { color: #fff3dc; font-size: 20px; font-weight: 500; }
-    .legend {
-      position: absolute; right: 18px; bottom: 17px; z-index: 3;
-      width: 208px; padding: 14px 15px;
-      border: 1px solid #d7b47b35;
-      background: #11120fe8;
-      box-shadow: 0 10px 28px #0007;
-      backdrop-filter: blur(10px);
-    }
-    .legend-title { margin-bottom: 11px; color: #e8dcc7; font-size: 9px; letter-spacing: .16em; }
-    .legend-row { display: flex; align-items: center; gap: 9px; margin: 7px 0; color: #c2bcae; font-size: 10px; }
-    .swatch { width: 16px; height: 10px; flex: none; border: 1px solid #f2e6d21a; }
-    .legend-note { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); color: #858176; font-size: 9px; line-height: 1.6; }
-    .map-caption {
-      display: flex; justify-content: space-between; gap: 20px;
-      padding: 13px 2px 0; color: #77756c; font-size: 9px; line-height: 1.7;
-      letter-spacing: .035em;
-    }
-    .map-caption a { color: #c4a875; text-decoration: none; }
-    .map-caption a:hover { color: #f0d7a9; text-decoration: underline; }
-    footer {
-      display: flex; justify-content: space-between; gap: 20px;
-      margin-top: 32px; padding: 17px 0 24px; border-top: 1px solid var(--line);
-      color: #6f6d64; font-size: 9px; letter-spacing: .1em;
-    }
-    .crosshair { color: #b4a98f; }
-    @media (max-width: 700px) {
-      .shell { width: min(100% - 32px, 1440px); }
-      header { min-height: 78px; }
-      .intro { display: block; padding: 30px 0 18px; }
-      .stats { margin-top: 22px; gap: 34px; }
-      .stat-value { font-size: 21px; }
-      .map-frame { min-height: 470px; aspect-ratio: .82 / 1; }
-      .map-svg { height: 100%; }
-      .legend { right: 10px; bottom: 10px; width: 177px; padding: 11px 12px; }
-      .legend-row { margin: 6px 0; font-size: 9px; }
-      .map-caption { display: block; }
-      .map-caption span { display: block; margin-bottom: 4px; }
-      footer { font-size: 8px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
-    }
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;color:#293a30;background:#f7f8f5;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0}.wrap{max-width:1040px;margin:auto;padding:0 26px}
+    header{height:82px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e7ebe5}
+    .brand{display:flex;align-items:center;gap:11px;font-weight:700;color:#2d4736;text-decoration:none}.mark{width:38px;height:38px;border-radius:13px;background:#42674f;color:#fff;display:grid;place-items:center;font-size:19px}.brand small{display:block;color:#849187;font-size:9px;letter-spacing:1.4px;margin-top:3px}
+    .label{font-size:10px;letter-spacing:2px;color:#8a998d}
+    .hero{margin:34px 0 36px;padding:48px 54px;border-radius:25px;background:linear-gradient(120deg,#e7efe6,#edf2eb);position:relative;overflow:hidden}
+    .kicker{color:#819583;font-weight:700;font-size:10px;letter-spacing:2.4px}.hero h1{font-size:clamp(31px,5vw,49px);line-height:1.35;letter-spacing:.03em;margin:13px 0;color:#314a38}.hero h1 span{color:#729178}.hero p{color:#748278;font-size:13px;line-height:1.9;max-width:520px;margin:0}
+    .orb{position:absolute;right:9%;top:35px;width:180px;height:180px;border-radius:54% 46% 50% 50%;background:#dce8d9;display:grid;place-items:center;color:#86a284;font-size:76px;opacity:.85}
+    h2{font-size:20px;color:#374a3d;margin:0}.section-label{color:#94a096;font-size:9px;letter-spacing:2px;margin-bottom:8px}.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:17px}
+    .tool{min-height:163px;padding:17px 16px;border-radius:16px;background:white;border:1px solid #edf0eb}.tool:nth-child(1){background:#f4eee5}.tool:nth-child(2){background:#eaf0f4}.tool:nth-child(3){background:#e7f1ef}.tool:nth-child(4){background:#f3ecf0}.tool:nth-child(5){background:#f3f0e4}
+    .icon{font-size:20px;color:#5f7a64}.tool h3{font-size:15px;margin:17px 0 5px;color:#3c5041}.tool p{font-size:10px;color:#818d84;line-height:1.7;margin:0}
+    .bottom{margin:30px 0;padding:22px 24px;background:#fff;border:1px solid #edf0eb;border-radius:16px;display:flex;align-items:center;justify-content:space-between;gap:20px}.bottom h2{font-size:16px}.bottom p{font-size:11px;color:#879289;margin:7px 0 0;line-height:1.7}.links{display:flex;gap:9px;flex:none}.btn{display:inline-block;padding:11px 15px;border-radius:10px;background:#42674f;color:white;text-decoration:none;font-size:11px;font-weight:600}.btn.light{background:#eef3ee;color:#47634d}
+    footer{padding:20px 0 28px;border-top:1px solid #e7ebe5;color:#9aa49b;font-size:10px;text-align:center}
+    @media(max-width:700px){.wrap{padding:0 17px}header{height:68px}.hero{padding:35px 24px;margin:20px 0 29px}.hero h1{font-size:32px;position:relative;z-index:1}.hero p{font-size:11px;max-width:245px;position:relative;z-index:1}.orb{right:-47px;top:58px;width:145px;height:145px;font-size:58px}.tools{grid-template-columns:repeat(2,1fr);gap:9px}.tool{min-height:145px;padding:14px}.tool:last-child{grid-column:span 2}.bottom{display:block;padding:19px}.links{margin-top:16px}.btn{padding:11px 13px}.label{font-size:8px}}
   </style>
 </head>
 <body>
-  <div class="shell">
+  <div class="wrap">
     <header>
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">⌖</div>
-        <div>
-          <div class="brand-name">全球戰略觀測</div>
-          <div class="brand-sub">GLOBAL STRATEGIC MONITOR</div>
-        </div>
-      </div>
-      <div class="edition">情報簡報 <strong>／ 2026</strong><br>OPEN SOURCE INTELLIGENCE</div>
+      <a class="brand" href="./"><span class="mark">L</span><span>LifeHub<small>生活有序一點</small></span></a>
+      <span class="label">YOUR EVERYDAY COMPANION</span>
     </header>
-
     <main>
-      <section class="intro" aria-labelledby="page-title">
-        <div>
-          <div class="eyebrow">核力量檔案 · 01 / 09</div>
-          <h1 id="page-title">世界核彈頭分布</h1>
-          <p class="subtitle">各國核彈頭估計總庫存 · 2026 年初</p>
-        </div>
-        <div class="stats" aria-label="全球估計總數">
-          <div class="stat">
-            <div class="stat-label">核武國家</div>
-            <div class="stat-value">09<span class="stat-unit">個</span></div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">全球估計總庫存</div>
-            <div class="stat-value">12,187<span class="stat-unit">枚</span></div>
-          </div>
+      <section class="hero">
+        <div class="kicker">A LITTLE MORE ORDER, EVERY DAY</div>
+        <h1>把生活，<br><span>整理成喜歡的樣子。</span></h1>
+        <p>記帳、待辦、喝水、購物與習慣，一個 LINE 裡的五合一智慧生活助手。用 LIFF 網頁管理日常，也能直接傳 LINE 指令快速記錄。</p>
+        <div class="orb" aria-hidden="true">✳</div>
+      </section>
+      <div class="section-label">FIVE TOOLS FOR EVERYDAY</div>
+      <h2>今天想整理什麼？</h2>
+      <section class="tools" aria-label="LifeHub 五項生活工具">
+        <article class="tool"><div class="icon">↗</div><h3>記帳</h3><p>新增支出，查看本月合計與紀錄。</p></article>
+        <article class="tool"><div class="icon">✓</div><h3>待辦清單</h3><p>新增、完成或刪除待辦事項。</p></article>
+        <article class="tool"><div class="icon">◒</div><h3>喝水進度</h3><p>記下飲水量，設定每日目標。</p></article>
+        <article class="tool"><div class="icon">▱</div><h3>購物清單</h3><p>列出採買項目，買到就勾選。</p></article>
+        <article class="tool"><div class="icon">✳</div><h3>習慣打卡</h3><p>每日打卡，累積連續完成天數。</p></article>
+      </section>
+      <section class="bottom">
+        <div><h2>準備好開始了嗎？</h2><p>開啟專案部署指南，依步驟連接 Cloudflare Workers、D1 和 LINE LIFF。</p></div>
+        <div class="links">
+          <a class="btn" href="https://github.com/Han-Ming-Cheng/1113/tree/main/LifeHub">LifeHub 專案</a>
+          <a class="btn light" href="https://github.com/Han-Ming-Cheng/1113/blob/main/LifeHub/README.md">部署指南</a>
         </div>
       </section>
-
-      <section class="map-frame" aria-label="世界各國核彈頭估計數量互動地圖">
-        <div class="map-loading" id="loading">正在載入世界地圖資料…</div>
-        <svg class="map-svg" id="world-map" viewBox="0 0 1200 620" role="img" aria-labelledby="map-title map-desc">
-          <title id="map-title">2026 年世界核彈頭估計總庫存分布</title>
-          <desc id="map-desc">滑鼠移至國家上可查看中文國名與核彈頭數量。棕色越深代表估計數量越多。</desc>
-        </svg>
-        <aside class="legend" aria-label="核彈頭數量顏色圖例">
-          <div class="legend-title">估計核彈頭數量 · 枚</div>
-          <div class="legend-row"><span class="swatch" style="background:#d5c5a6"></span>0 枚</div>
-          <div class="legend-row"><span class="swatch" style="background:#c79662"></span>1–100 枚</div>
-          <div class="legend-row"><span class="swatch" style="background:#a66c3c"></span>101–250 枚</div>
-          <div class="legend-row"><span class="swatch" style="background:#82502e"></span>251–700 枚</div>
-          <div class="legend-row"><span class="swatch" style="background:#5a351f"></span>701–2,000 枚</div>
-          <div class="legend-row"><span class="swatch" style="background:#321d14"></span>2,001 枚以上</div>
-          <div class="legend-note">數量為各國估計總庫存；包含退役後仍待拆解的彈頭。</div>
-        </aside>
-      </section>
-
-      <div class="map-caption">
-        <span>資料基準：2026 年初估計 · 數字含高度不確定性</span>
-        <span>資料來源：<a href="https://fas.org/initiative/status-world-nuclear-forces/" target="_blank" rel="noopener noreferrer">美國科學家聯盟 FAS · Status of World Nuclear Forces 2026</a></span>
-      </div>
     </main>
-
-    <footer>
-      <span>互動式全球態勢地圖 <span class="crosshair">／</span> 2026</span>
-      <span>公開來源彙整 · 國家數據為估算值</span>
-    </footer>
+    <footer>照顧好生活的小事，就是照顧好自己。　✦　LifeHub</footer>
   </div>
-
-  <div class="tooltip" id="tooltip" role="status" aria-live="polite">
-    <div class="tip-kicker">COUNTRY PROFILE</div>
-    <div class="tip-country" id="tip-country"></div>
-    <div class="tip-count" id="tip-count"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-  <script>
-    (() => {
-      "use strict";
-
-      const estimates = {
-        "643": { name: "俄羅斯", count: 5420 },
-        "840": { name: "美國", count: 5042 },
-        "250": { name: "法國", count: 370 },
-        "156": { name: "中國", count: 620 },
-        "826": { name: "英國", count: 225 },
-        "376": { name: "以色列", count: 90 },
-        "586": { name: "巴基斯坦", count: 170 },
-        "356": { name: "印度", count: 190 },
-        "408": { name: "北韓", count: 60 }
-      };
-
-      const colors = ["#d5c5a6", "#c79662", "#a66c3c", "#82502e", "#5a351f", "#321d14"];
-      const format = new Intl.NumberFormat("zh-TW");
-      const svg = d3.select("#world-map");
-      const loading = document.getElementById("loading");
-      const tooltip = document.getElementById("tooltip");
-      const tipCountry = document.getElementById("tip-country");
-      const tipCount = document.getElementById("tip-count");
-      const width = 1200;
-      const height = 620;
-      const projection = d3.geoNaturalEarth1().fitExtent([[24, 28], [1176, 592]], { type: "Sphere" });
-      const path = d3.geoPath(projection);
-
-      function colorFor(count) {
-        if (count === 0) return colors[0];
-        if (count <= 100) return colors[1];
-        if (count <= 250) return colors[2];
-        if (count <= 700) return colors[3];
-        if (count <= 2000) return colors[4];
-        return colors[5];
-      }
-
-      function showTooltip(event, feature, data) {
-        const countryName = data.name || feature.properties.name || "未知國家";
-        tipCountry.textContent = countryName;
-        tipCount.innerHTML = "估計數量 <strong>" + format.format(data.count) + "</strong> 枚";
-        tooltip.classList.add("visible");
-        const point = event.touches && event.touches.length
-          ? { clientX: event.touches[0].clientX, clientY: event.touches[0].clientY }
-          : event;
-        const x = Math.min(point.clientX + 16, window.innerWidth - 220);
-        const y = Math.min(point.clientY + 16, window.innerHeight - 100);
-        tooltip.style.left = Math.max(8, x) + "px";
-        tooltip.style.top = Math.max(8, y) + "px";
-      }
-
-      function hideTooltip() { tooltip.classList.remove("visible"); }
-
-      async function renderMap() {
-        try {
-          if (!window.d3 || !window.topojson) throw new Error("地圖工具載入失敗");
-          const [world, countryData] = await Promise.all([
-            d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"),
-            d3.json("https://cdn.jsdelivr.net/npm/world-countries@5.1.0/countries.json")
-          ]);
-
-          const chineseNames = new Map(
-            countryData.map(country => [
-              String(country.ccn3 || "").padStart(3, "0"),
-              country.translations && country.translations.zho
-                ? country.translations.zho.common
-                : country.name.common
-            ])
-          );
-          const countries = topojson.feature(world, world.objects.countries).features
-            .filter(feature => feature.id !== "010" && feature.id !== 10);
-
-          svg.append("path").datum({ type: "Sphere" }).attr("class", "sphere").attr("d", path);
-          svg.append("path").datum(d3.geoGraticule10()).attr("class", "graticule").attr("d", path);
-
-          const countryPaths = svg.append("g")
-            .selectAll("path")
-            .data(countries)
-            .join("path")
-            .attr("class", "country")
-            .attr("d", path)
-            .attr("fill", feature => colorFor((estimates[String(feature.id).padStart(3, "0")] || {}).count || 0))
-            .attr("tabindex", 0)
-            .attr("role", "img")
-            .attr("aria-label", feature => {
-              const id = String(feature.id).padStart(3, "0");
-              const data = estimates[id] || { count: 0 };
-              return (data.name || chineseNames.get(id) || feature.properties.name) + "，" + format.format(data.count) + " 枚";
-            });
-
-          countryPaths
-            .on("pointermove", (event, feature) => {
-              const id = String(feature.id).padStart(3, "0");
-              const data = estimates[id] || {
-                name: chineseNames.get(id) || feature.properties.name,
-                count: 0
-              };
-              showTooltip(event, feature, data);
-            })
-            .on("pointerleave", hideTooltip)
-            .on("focus", (event, feature) => {
-              const id = String(feature.id).padStart(3, "0");
-              const data = estimates[id] || {
-                name: chineseNames.get(id) || feature.properties.name,
-                count: 0
-              };
-              const rect = event.currentTarget.getBoundingClientRect();
-              showTooltip({ clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }, feature, data);
-            })
-            .on("blur", hideTooltip);
-
-          loading.hidden = true;
-        } catch (error) {
-          loading.innerHTML = '<div class="map-error"><strong>地圖資料暫時無法載入</strong>請確認網路連線後重新整理。國家數量與資料來源仍列於頁面資訊中。</div>';
-          console.error(error);
-        }
-      }
-
-      renderMap();
-    })();
-  </script>
 </body>
 </html>
