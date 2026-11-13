@@ -48,6 +48,30 @@ test('health, static assets, auth guard and webhook signature guard', async () =
   assert.equal((await call(env, '/webhook', 'POST', {})).status, 401);
 });
 
+test('health reports runtime binding presence without exposing values', async () => {
+  const { env } = mockEnv();
+  env.LINE_CHANNEL_ID = 'login-channel-id-private';
+  env.LINE_CHANNEL_SECRET = 'messaging-secret-private';
+  env.LINE_CHANNEL_ACCESS_TOKEN = 'messaging-token-private';
+  env.LIFF_ID = 'liff-id-private';
+  const response = await call(env, '/health');
+  const raw = await response.text();
+  const health = JSON.parse(raw);
+  assert.equal(health.diagnosticVersion, 'bindings-20261113');
+  assert.equal(health.mode, 'line-auth');
+  assert.equal(health.liffConfigured, true);
+  assert.equal(health.messagingConfigured, true);
+  assert.deepEqual(health.bindings, {
+    LINE_CHANNEL_ID: true,
+    LINE_CHANNEL_SECRET: true,
+    LINE_CHANNEL_ACCESS_TOKEN: true,
+    LIFF_ID: true,
+  });
+  for (const value of [env.LINE_CHANNEL_ID, env.LINE_CHANNEL_SECRET, env.LINE_CHANNEL_ACCESS_TOKEN, env.LIFF_ID]) {
+    assert.equal(raw.includes(value), false);
+  }
+});
+
 test('state reads the single water total returned by D1 first()', async () => {
   const { env } = mockEnv();
   const response = await call(env, '/api/state');

@@ -132,7 +132,19 @@ async function handleWebhook(req:Request,env:Env):Promise<Response>{
 export default { async fetch(req:Request,env:Env):Promise<Response>{
   const url=new URL(req.url);
   if(url.pathname==='/webhook'&&req.method==='POST')return handleWebhook(req,env);
-  if(url.pathname==='/health')return json({ok:true,mode:env.LINE_CHANNEL_ID?'line-auth':isLocal(req)?'local-demo':'unconfigured',liffConfigured:!!env.LIFF_ID,messagingConfigured:!!(env.LINE_CHANNEL_SECRET&&env.LINE_CHANNEL_ACCESS_TOKEN)});
+  if(url.pathname==='/health')return json({
+    ok:true,
+    diagnosticVersion:'bindings-20261113',
+    mode:env.LINE_CHANNEL_ID?'line-auth':isLocal(req)?'local-demo':'unconfigured',
+    liffConfigured:!!env.LIFF_ID,
+    messagingConfigured:!!(env.LINE_CHANNEL_SECRET&&env.LINE_CHANNEL_ACCESS_TOKEN),
+    bindings:{
+      LINE_CHANNEL_ID:!!env.LINE_CHANNEL_ID,
+      LINE_CHANNEL_SECRET:!!env.LINE_CHANNEL_SECRET,
+      LINE_CHANNEL_ACCESS_TOKEN:!!env.LINE_CHANNEL_ACCESS_TOKEN,
+      LIFF_ID:!!env.LIFF_ID,
+    },
+  });
   if(url.pathname==='/config.js')return new Response(`window.LIFF_ID=${JSON.stringify(env.LIFF_ID??'')};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}});
   if(url.pathname==='/api/auth/demo'&&req.method==='POST')return env.LINE_CHANNEL_ID||!isLocal(req)?fail('正式環境不提供 Demo 登入。',403):json({accessToken:'lifehub-local-demo-token',mode:'demo'});
   if(url.pathname.startsWith('/api/')){const ctx=await authenticate(req,env);if(ctx instanceof Response)return ctx;try{return await dataApi(req,env,ctx);}catch(e){console.error(e);return fail('資料操作失敗，請確認 D1 migration 已套用。',500);}}
