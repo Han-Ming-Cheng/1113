@@ -146,7 +146,7 @@ async function handleAssistant(req:Request):Promise<Response>{
     if(typeof data.endpoint!=='string'||data.endpoint.length>500||typeof data.model!=='string'||data.model.length>120)return fail('請填寫相容 API 網址和模型名稱。');
     let endpoint:URL;
     try{endpoint=new URL(data.endpoint)}catch{return fail('相容 API 網址格式錯誤。')}
-    const host=endpoint.hostname.toLowerCase();
+    const host=endpoint.hostname.toLowerCase().replace(/\.$/,'');
     if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password||endpoint.port||endpoint.search||endpoint.hash||!host.includes('.')||host.startsWith('[')||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)||/(?:^|\.)(?:localhost|local|internal|test|invalid)$/.test(host)||!/\/chat\/completions\/?$/.test(endpoint.pathname))return fail('請填寫公開 HTTPS 網址，路徑須以 /chat/completions 結尾。');
     customModel=data.model.trim();
     if(!/^[A-Za-z0-9._:/-]{1,120}$/.test(customModel))return fail('模型名稱格式錯誤。');

@@ -228,7 +228,7 @@ test('assistant accepts a public HTTPS Chat Completions endpoint and rejects loc
     assert.equal(calls[0].options.redirect, 'error');
     assert.equal(calls[0].options.headers.authorization, 'Bearer private-test-key');
     assert.equal(JSON.parse(calls[0].options.body).model, 'demo-model');
-    for (const endpoint of ['http://api.example.com/v1/chat/completions', 'https://localhost/v1/chat/completions', 'https://127.0.0.1/v1/chat/completions', 'https://api.example.com/other']) {
+    for (const endpoint of ['http://api.example.com/v1/chat/completions', 'https://localhost/v1/chat/completions', 'https://localhost./v1/chat/completions', 'https://127.0.0.1/v1/chat/completions', 'https://api.example.com/other']) {
       const rejected = await worker.fetch(request(endpoint), env);
       assert.equal(rejected.status, 400);
     }
