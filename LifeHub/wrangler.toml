@@ -3,9 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2026-11-13"
 keep_vars = true
 
-[secrets]
-required = ["LINE_CHANNEL_ID", "LINE_CHANNEL_SECRET", "LINE_CHANNEL_ACCESS_TOKEN"]
-
 [assets]
 directory = "./public"
 binding = "ASSETS"

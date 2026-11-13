@@ -2,7 +2,9 @@
 
 正式 LINE 串接、Cloudflare 變數、圖文選單與驗收步驟請看 [LINE_SETUP.md](LINE_SETUP.md)。
 
-手機優先的 LINE LIFF 生活工具作品：記帳、待辦、喝水、購物清單、習慣打卡。Cloudflare Worker 提供頁面/API/Webhook，D1 保存資料。本機 Demo 無需 LINE 憑證即可操作；正式模式透過 LIFF ID token 驗證 LINE 身分，API 不接受前端指定 userId。
+手機優先的 LINE LIFF 生活工具作品：記帳、待辦、喝水、購物清單、習慣打卡。Cloudflare Worker 提供頁面/API/Webhook，D1 保存經 LINE 驗證使用者的正式資料。LINE 尚未設定完成時，公開首頁會啟用瀏覽器 Demo，五個工具可直接操作，資料只保存在使用者自己的瀏覽器。正式 API 不接受前端指定 userId。
+
+作品入口：`https://lifehub-line-five-in-one.han890131.workers.dev/`；問題回報：`/report.html`；互動說明簡報：`/slides.html`。
 
 ## 本機 Demo（零 npm 依賴）
 
@@ -38,7 +40,7 @@ python3 local_demo.py
 
 `wrangler.toml` 的 `main = "src/index.ts"` 指向 Worker `fetch()` 入口；`[assets]` 使用 `./public`，binding 為 `ASSETS`；D1 binding 為 `DB`。`run_worker_first` 會將 `/api/*`、`/health`、`/webhook`、`/config.js` 交給 Worker 程式處理，其他靜態檔由 Workers Assets 提供。後端路由在 `src/index.ts`。
 
-設定完成後先手動 Redeploy 一次，再開啟 `<worker-url>/health`；尚未設定 LINE channel 時會回報 `local-demo`。部署後若 D1 初始化 SQL 已在 Cloudflare Console 執行，就不需重建資料庫。
+設定完成後先手動 Redeploy 一次，再開啟 `<worker-url>/health`；正式網址尚未設定 LINE channel 時會回報 `unconfigured`，首頁仍可用瀏覽器 Demo 體驗。部署後若 D1 初始化 SQL 已在 Cloudflare Console 執行，就不需重建資料庫。
 
 ## LINE Developers 設定
 
@@ -64,7 +66,7 @@ Webhook 來源 userId 是 LINE 簽章驗證過的事件來源；各筆資料均�
 
 - `/slides.html` 有 6 頁互動簡報，鍵盤左右鍵/按鈕切換。點「下載 PDF / 列印」，在系統列印視窗選「儲存為 PDF」。
 - 圖文選單 PNG 已產生於 `public/line-richmenu-2500x843.png`。重製：`python3 scripts/generate-menu.py`（或 `npm run menu`）。
-- 首頁「回報問題」複製裝置、時間、描述、重現步驟的預填範本，貼至 LINE 官方帳號，不建客服後台。
+- 首頁五張功能卡下方的「填寫問題回報」會開啟 `/report.html`。操作失敗時會出現「回報這個錯誤」，表單自動帶入功能、錯誤訊息與操作資訊；使用者確認後可複製、分享或下載文字，再貼至 LINE 官方帳號，不建客服後台。
 
 ## 測試清單
 

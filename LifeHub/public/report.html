@@ -30,6 +30,7 @@
     .preview{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f8f3;border-radius:12px;padding:16px;color:#496253;font-size:12px;line-height:1.8;min-height:220px}
     .status{font-size:12px;color:#416b50;min-height:1.5em;margin-top:13px}.steps{padding-left:20px;color:#667b6b;font-size:12px;line-height:2}
     .note{font-size:11px;color:#8b998c;line-height:1.7;margin-top:17px}
+    .context-box[hidden]{display:none}.context-box{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff5e9;border:1px solid #efd7b8;border-radius:11px;color:#74533a;padding:11px 13px;margin:-7px 0 18px;font-size:12px;line-height:1.6}.context-box button{border:0;background:transparent;color:#725136;text-decoration:underline;cursor:pointer;white-space:nowrap;font-size:12px}
     @media(max-width:720px){.shell{padding:0 15px 40px}header{height:67px}.hero{padding:28px 24px}.hero:after{right:0;top:28px;font-size:92px}h1{font-size:29px}.hero p{max-width:290px;font-size:12px}.layout{grid-template-columns:1fr;gap:14px}.panel{padding:22px}.fields{grid-template-columns:1fr;gap:0}}
   </style>
 </head>
@@ -40,7 +41,8 @@
       <section class="hero"><span class="eyebrow">WE'RE HERE TO HELP</span><h1>問題回報</h1><p>填寫遇到的狀況，複製整理好的文字，貼到 LifeHub LINE 官方帳號聊天視窗。</p></section>
       <div class="layout">
         <form class="panel" id="reportForm">
-          <h2>發生了什麼事？</h2><p class="muted">這份表單只在你的瀏覽器產生回報文字，不會自動送出或儲存。</p>
+          <h2>發生了什麼事？</h2><p class="muted">回報不會自動傳送。剛發生的錯誤資訊只暫存在此分頁，讓你確認後再分享。</p>
+          <div id="autoContext" class="context-box" hidden><span>已帶入剛才在 LifeHub 發生的錯誤；送出前可修改內容。</span><button id="clearContext" type="button">清除帶入資訊</button></div>
           <div class="fields">
             <div class="field"><label for="category">問題類型</label><select id="category"><option>無法登入</option><option>資料無法儲存</option><option>資料顯示異常</option><option>LINE 指令無回應</option><option>畫面或操作問題</option><option>其他</option></select></div>
             <div class="field"><label for="tool">相關功能</label><select id="tool"><option>整體／不確定</option><option>記帳</option><option>待辦</option><option>喝水</option><option>購物清單</option><option>習慣打卡</option><option>LINE 聊天指令</option></select></div>
@@ -63,6 +65,18 @@
     const status=document.querySelector('#status');
     const timestamp=new Date();
     document.querySelector('#when').value=new Date(timestamp.getTime()-timestamp.getTimezoneOffset()*60000).toISOString().slice(0,16);
+    try{
+      const issue=JSON.parse(sessionStorage.getItem('lifehub:lastError')||'null');
+      if(issue?.source==='app-error'&&Number.isFinite(issue.at)&&Date.now()-issue.at<3600000){
+        if([...document.querySelector('#category').options].some(x=>x.value===issue.category))document.querySelector('#category').value=issue.category;
+        if([...document.querySelector('#tool').options].some(x=>x.value===issue.tool))document.querySelector('#tool').value=issue.tool;
+        document.querySelector('#when').value=new Date(issue.at-new Date(issue.at).getTimezoneOffset()*60000).toISOString().slice(0,16);
+        document.querySelector('#description').value=String(issue.description||'').slice(0,1000);
+        document.querySelector('#steps').value=String(issue.steps||'').slice(0,1000);
+        document.querySelector('#autoContext').hidden=false;
+      }
+    }catch{}
+    document.querySelector('#clearContext').addEventListener('click',()=>{try{sessionStorage.removeItem('lifehub:lastError')}catch{}document.querySelector('#autoContext').hidden=true;document.querySelector('#description').value='';document.querySelector('#steps').value='';refresh()});
     function reportText(){return [
       'LifeHub 問題回報',
       '問題類型：'+field('category'),

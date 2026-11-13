@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy --config wrangler.toml --keep-vars",
     "build": "npm run typecheck",
     "typecheck": "tsc --noEmit",
-    "test": "python3 -m unittest discover -s tests -v && node --experimental-strip-types --test tests/worker-smoke.test.mjs",
+    "test": "python3 -m unittest discover -s tests -v && node --experimental-strip-types --test tests/*.test.mjs",
     "db:local": "wrangler d1 migrations apply lifehub-db --local",
     "db:remote": "wrangler d1 migrations apply lifehub-db --remote",
     "menu": "node scripts/generate-menu.mjs"
