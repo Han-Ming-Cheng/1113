@@ -70,6 +70,8 @@ class LocalDemoApiTests(unittest.TestCase):
         self.assertTrue(habit['checkedToday'])
         self.assertEqual(habit['streak'], 1)
 
+        self.assertEqual(self.call_api('PATCH', f'/expenses/{expense_id}', {'title': '晚餐', 'amount': 150})[0], 200)
+        self.assertEqual(self.call_api('GET', '/state')[1]['expenseTotal'], 150)
         self.assertEqual(self.call_api('DELETE', f'/expenses/{expense_id}')[0], 200)
         self.assertEqual(self.call_api('GET', '/state')[1]['expenseTotal'], 0)
         self.assertEqual(self.call_api('DELETE', f'/todos/{todo_id}')[0], 200)

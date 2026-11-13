@@ -79,6 +79,10 @@ class Handler(BaseHTTPRequestHandler):
                     title=clean(data.get('title','')); amount=data.get('amount')
                     if not title or not isinstance(amount,int) or amount<1:return self.send_json({'error':'請輸入項目與正整數金額。'},400)
                     db.execute('INSERT INTO expenses(id,user_id,title,amount) VALUES(?,?,?,?)',(ident(),user,title,amount));return self.send_json({'ok':True},201)
+                if len(parts)==2 and parts[0]=='expenses' and method=='PATCH':
+                    title=clean(data.get('title','')); amount=data.get('amount')
+                    if not title or not isinstance(amount,int) or amount<1:return self.send_json({'error':'請輸入項目與正整數金額。'},400)
+                    db.execute('UPDATE expenses SET title=?,amount=? WHERE id=? AND user_id=?',(title,amount,parts[1],user));return self.send_json({'ok':True})
                 if len(parts)==2 and parts[0]=='expenses' and method=='DELETE':
                     db.execute('DELETE FROM expenses WHERE id=? AND user_id=?',(parts[1],user));return self.send_json({'ok':True})
                 if p=='/todos' and method=='POST':

@@ -47,6 +47,10 @@ test('browser Demo supports and persists all five tools without backend credenti
   assert.equal(state.habits[0].checkedToday, true);
   assert.equal(state.habits[0].streak, 1);
 
+  request(`/expenses/${state.expenses[0].id}`, 'PATCH', { title: '晚餐', amount: 150 });
+  state = request('/state');
+  assert.equal(state.expenses[0].title, '晚餐');
+  assert.equal(state.expenseTotal, 150);
   request(`/expenses/${state.expenses[0].id}`, 'DELETE');
   request(`/todos/${state.todos[0].id}`, 'DELETE');
   request(`/shopping/${state.shopping[0].id}`, 'DELETE');

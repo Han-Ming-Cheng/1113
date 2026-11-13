@@ -83,6 +83,7 @@ test('five tool API mutations reach D1, including PUT water goal', async () => {
   const { env, statements } = mockEnv();
   const operations = [
     ['/api/expenses', 'POST', { title: '午餐', amount: 120 }, 201],
+    ['/api/expenses/expense-1', 'PATCH', { title: '晚餐', amount: 150 }, 200],
     ['/api/expenses/expense-1', 'DELETE', undefined, 200],
     ['/api/todos', 'POST', { title: '買牛奶' }, 201],
     ['/api/todos/todo-1', 'PATCH', { done: true }, 200],
@@ -102,6 +103,7 @@ test('five tool API mutations reach D1, including PUT water goal', async () => {
   assert.ok(statements.some(s => s.sql.includes('water_settings') && s.values.includes(2200)),
     'PUT /api/water/goal must persist its submitted goal');
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO expenses')));
+  assert.ok(statements.some(s => s.sql.includes('UPDATE expenses SET title=?,amount=? WHERE id=? AND user_id=?') && s.values[0] === '晚餐' && s.values[1] === 150 && s.values[3] === 'local-demo-user'));
   assert.ok(statements.some(s => s.sql.includes('DELETE FROM expenses WHERE id=? AND user_id=?') && s.values[0] === 'expense-1' && s.values[1] === 'local-demo-user'));
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO todos')));
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO water_logs')));

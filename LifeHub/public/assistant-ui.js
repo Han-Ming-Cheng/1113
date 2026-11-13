@@ -90,7 +90,7 @@
       if (!state) return '資料還在載入，請稍後再問一次。';
       return `今天的 LifeHub：本月支出 $${Number(state.expenseTotal).toLocaleString()}；未完成待辦 ${state.todos.filter(item => !item.done).length} 件；喝水 ${state.waterToday}/${state.waterGoal} ml；待買 ${state.shopping.filter(item => !item.checked).length} 件；今日打卡 ${state.habits.filter(item => item.checkedToday).length} 次。`;
     }
-    if (/記帳|支出|花費/.test(question)) return '點首頁「記帳」卡片，輸入項目與金額後按「記一筆」；卡片會顯示本月總額；填錯時可在紀錄旁按「刪除」。';
+    if (/記帳|支出|花費/.test(question)) return '點首頁「記帳」卡片，輸入項目與金額後按「記一筆」；卡片會顯示本月總額；填錯時可在紀錄旁按「修改」更正，或按「刪除」。';
     if (/待辦|任務/.test(question)) return '點「待辦清單」新增事項，完成後勾選；不需要的事項可按 × 刪除。';
     if (/喝水|飲水/.test(question)) return '點「喝水提醒」可快速記錄 150、250、300 或 500 ml，也能修改每日目標。';
     if (/購物|採買/.test(question)) return '點「購物清單」新增品項；買到後勾選，或按 × 刪除。';
@@ -180,6 +180,8 @@
     get('#assistantCustomFields').hidden = providerSelect.value !== 'custom';
     get('#assistantCloudflareFields').hidden = providerSelect.value !== 'cloudflare';
     get('#assistantKeyInput').value = '';
+    get('#assistantKeyLabel').textContent = providerSelect.value === 'cloudflare' ? 'Cloudflare Workers AI API Token' : `${providerNames[providerSelect.value]} API Key`;
+    get('#assistantKeyInput').setAttribute('aria-label', get('#assistantKeyLabel').textContent);
     get('#assistantKeyInput').placeholder = providerSelect.value === 'cloudflare' ? '貼上 Workers AI API Token' : `貼上你的 ${providerNames[providerSelect.value]} API Key`;
     get('#assistantKeyStatus').textContent = providerSelect.value === 'cloudflare'
       ? '請輸入自己的 Cloudflare Account ID 與 Workers AI API Token；Token 僅留在目前頁面。'
