@@ -16,7 +16,7 @@ function mockEnv() {
               return {
                 run: async () => ({ success: true }),
                 all: async () => ({ results: [] }),
-                first: async () => sql.includes('FROM water_logs') ? { total: 300 } : null,
+                first: async () => sql.includes('SELECT id FROM habits') ? { id: 'habit-1' } : sql.includes('FROM water_logs') ? { total: 300 } : null,
               };
             },
           };
@@ -31,7 +31,7 @@ async function call(env, path, method = 'GET', body, auth = true) {
   const headers = {};
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (auth) headers.authorization = 'Bearer lifehub-local-demo-token';
-  return worker.fetch(new Request(`https://lifehub.test${path}`, {
+  return worker.fetch(new Request(`http://localhost${path}`, {
     method,
     headers,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -81,4 +81,59 @@ test('five tool API mutations reach D1, including PUT water goal', async () => {
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO water_logs')));
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO shopping_items')));
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO habits')));
+});
+
+test('signed LINE commands bind the verified source user and stable event ID', async () => {
+  const { env, statements } = mockEnv();
+  env.LINE_CHANNEL_SECRET = 'test-secret';
+  const commands = ['記帳 午餐 120', '待辦 買牛奶', '喝水 300', '購物 雞蛋', '打卡 運動', '今日摘要', '幫助'];
+  const events = commands.map((text, index) => ({
+    type: 'message', webhookEventId: `event-${index}`, replyToken: `reply-${index}`,
+    source: { userId: index === 1 ? 'U-second' : 'U-first' },
+    message: { type: 'text', text },
+  }));
+  const raw = JSON.stringify({ events });
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.LINE_CHANNEL_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = Buffer.from(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw))).toString('base64');
+  const send = () => worker.fetch(new Request('https://lifehub.test/webhook', {
+    method: 'POST', headers: { 'x-line-signature': signature }, body: raw,
+  }), env);
+  assert.equal((await send()).status, 200);
+  assert.equal((await send()).status, 200);
+  const inserts = statements.filter(s => s.sql.startsWith('INSERT OR IGNORE INTO'));
+  assert.ok(inserts.some(s => s.sql.includes('expenses') && s.values[0] === 'event-0' && s.values[1] === 'U-first'));
+  assert.ok(inserts.some(s => s.sql.includes('todos') && s.values[0] === 'event-1' && s.values[1] === 'U-second'));
+  assert.ok(inserts.some(s => s.sql.includes('water_logs') && s.values[0] === 'event-2'));
+  assert.ok(inserts.some(s => s.sql.includes('shopping_items') && s.values[0] === 'event-3'));
+  assert.ok(inserts.some(s => s.sql.includes('habit_logs') && s.values[0] === 'event-4'));
+  assert.equal(inserts.filter(s => s.sql.includes('expenses')).length, 2);
+  assert.ok(statements.some(s => s.sql.includes('SELECT COUNT(*) n FROM todos') && s.values[0] === 'U-first'));
+});
+
+test('public Worker without LINE config rejects shared demo identity', async () => {
+  const { env } = mockEnv();
+  const response = await worker.fetch(new Request('https://lifehub.test/api/auth/demo', { method: 'POST' }), env);
+  assert.equal(response.status, 403);
+});
+
+test('LIFF API uses verified LINE sub instead of submitted userId', async () => {
+  const { env, statements } = mockEnv();
+  env.LINE_CHANNEL_ID = 'login-channel';
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, 'https://api.line.me/oauth2/v2.1/verify');
+    assert.equal(new URLSearchParams(options.body).get('client_id'), 'login-channel');
+    return Response.json({ sub: 'U-verified', aud: 'login-channel', iss: 'https://access.line.me', exp: Math.floor(Date.now() / 1000) + 3600 });
+  };
+  try {
+    const request = new Request('https://lifehub.test/api/expenses', {
+      method: 'POST', headers: { authorization: 'Bearer line-id-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ title: '午餐', amount: 120, userId: 'U-forged' }),
+    });
+    assert.equal((await worker.fetch(request, env)).status, 201);
+    const insert = statements.find(s => s.sql.includes('INSERT INTO expenses'));
+    assert.equal(insert.values[1], 'U-verified');
+    assert.ok(!insert.values.includes('U-forged'));
+  } finally { globalThis.fetch = originalFetch; }
 });

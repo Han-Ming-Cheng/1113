@@ -1,0 +1,11 @@
+{
+  "size": {"width": 2500, "height": 843},
+  "selected": true,
+  "name": "LifeHub 五合一生活助手",
+  "chatBarText": "開啟 LifeHub",
+  "areas": [
+    {"bounds": {"x": 0, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "uri": "https://liff.line.me/<LIFF_ID>"}},
+    {"bounds": {"x": 833, "y": 0, "width": 833, "height": 843}, "action": {"type": "uri", "uri": "https://liff.line.me/<LIFF_ID>/?quick=1"}},
+    {"bounds": {"x": 1666, "y": 0, "width": 834, "height": 843}, "action": {"type": "uri", "uri": "https://lifehub-line-five-in-one.han890131.workers.dev/slides.html"}}
+  ]
+}
