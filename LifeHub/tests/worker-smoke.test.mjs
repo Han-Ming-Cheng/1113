@@ -137,3 +137,17 @@ test('LIFF API uses verified LINE sub instead of submitted userId', async () => 
     assert.ok(!insert.values.includes('U-forged'));
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test('daily and monthly records use Taipei calendar dates', async () => {
+  const RealDate = globalThis.Date;
+  globalThis.Date = class extends RealDate {
+    constructor(...args) { super(...(args.length ? args : ['2026-11-30T20:00:00Z'])); }
+  };
+  try {
+    const { env, statements } = mockEnv();
+    assert.equal((await call(env, '/api/habits/habit-1/check', 'POST', {})).status, 200);
+    assert.ok(statements.some(s => s.sql.includes('habit_logs') && s.values.includes('2026-12-01')));
+    assert.equal((await call(env, '/api/state')).status, 200);
+    assert.ok(statements.some(s => s.sql.includes("strftime('%Y-%m'") && s.values.includes('2026-12')));
+  } finally { globalThis.Date = RealDate; }
+});

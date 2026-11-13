@@ -5,8 +5,12 @@ export interface Env {
 type Ctx = { userId: string; demo: boolean };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const id = () => crypto.randomUUID();
-const day = () => new Date().toISOString().slice(0, 10);
-const month = () => new Date().toISOString().slice(0, 7);
+const day = () => {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const value = (part: string) => parts.find(p => p.type === part)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+};
+const month = () => day().slice(0, 7);
 const fail = (message: string, status = 400) => json({ error: message }, status);
 const isLocal = (req: Request) => ['localhost', '127.0.0.1'].includes(new URL(req.url).hostname);
 async function authenticate(req: Request, env: Env): Promise<Ctx | Response> {
@@ -37,10 +41,10 @@ async function dataApi(req: Request, env: Env, ctx: Ctx): Promise<Response> {
   const db = env.DB, user = ctx.userId;
   if (p === '/state' && method === 'GET') {
     const [expenses, expSum, todos, waterRows, setting, shopping, habits] = await Promise.all([
-      db.prepare("SELECT id,title,amount,created_at FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at)=? ORDER BY created_at DESC LIMIT 30").bind(user, month()).all(),
-      db.prepare("SELECT COALESCE(SUM(amount),0) total FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at)=?").bind(user, month()).first<{total:number}>(),
+      db.prepare("SELECT id,title,amount,created_at FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at,'+8 hours')=? ORDER BY created_at DESC LIMIT 30").bind(user, month()).all(),
+      db.prepare("SELECT COALESCE(SUM(amount),0) total FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at,'+8 hours')=?").bind(user, month()).first<{total:number}>(),
       db.prepare('SELECT id,title,done,created_at FROM todos WHERE user_id=? ORDER BY done,created_at DESC LIMIT 100').bind(user).all(),
-      db.prepare("SELECT COALESCE(SUM(amount),0) total FROM water_logs WHERE user_id=? AND date(created_at)=?").bind(user, day()).first<{total:number}>(),
+      db.prepare("SELECT COALESCE(SUM(amount),0) total FROM water_logs WHERE user_id=? AND date(created_at,'+8 hours')=?").bind(user, day()).first<{total:number}>(),
       db.prepare('SELECT daily_goal FROM water_settings WHERE user_id=?').bind(user).first<{daily_goal:number}>(),
       db.prepare('SELECT id,title,checked,created_at FROM shopping_items WHERE user_id=? ORDER BY checked,created_at DESC').bind(user).all(),
       db.prepare('SELECT id,title,created_at FROM habits WHERE user_id=? ORDER BY created_at').bind(user).all()
@@ -111,10 +115,10 @@ async function handleWebhook(req:Request,env:Env):Promise<Response>{
       result=`✅ ${title} 已完成今日打卡！`;
     }else if(command==='今日摘要'){
       const [todayExpense,monthExpense,todo,water,goal,shopping,habits]=await Promise.all([
-        env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM expenses WHERE user_id=? AND date(created_at)=?").bind(user,day()).first<{n:number}>(),
-        env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at)=?").bind(user,month()).first<{n:number}>(),
+        env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM expenses WHERE user_id=? AND date(created_at,'+8 hours')=?").bind(user,day()).first<{n:number}>(),
+        env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at,'+8 hours')=?").bind(user,month()).first<{n:number}>(),
         env.DB.prepare('SELECT COUNT(*) n FROM todos WHERE user_id=? AND done=0').bind(user).first<{n:number}>(),
-        env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM water_logs WHERE user_id=? AND date(created_at)=?").bind(user,day()).first<{n:number}>(),
+        env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM water_logs WHERE user_id=? AND date(created_at,'+8 hours')=?").bind(user,day()).first<{n:number}>(),
         env.DB.prepare('SELECT daily_goal n FROM water_settings WHERE user_id=?').bind(user).first<{n:number}>(),
         env.DB.prepare('SELECT COUNT(*) n FROM shopping_items WHERE user_id=? AND checked=0').bind(user).first<{n:number}>(),
         env.DB.prepare('SELECT COUNT(*) n FROM habit_logs WHERE user_id=? AND day=?').bind(user,day()).first<{n:number}>()
