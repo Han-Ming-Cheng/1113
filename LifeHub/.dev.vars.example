@@ -1,0 +1,6 @@
+# For local demo, leave LINE credentials unset.
+# LIFF_ID=your_liff_id
+# LINE_CHANNEL_ID=your_login_channel_id
+# LINE_CHANNEL_SECRET=your_messaging_channel_secret
+# LINE_CHANNEL_ACCESS_TOKEN=your_long_lived_channel_access_token
+# PUBLIC_BASE_URL=https://your-worker.workers.dev

@@ -1,0 +1,18 @@
+name = "lifehub-line-five-in-one"
+main = "src/index.ts"
+compatibility_date = "2026-11-13"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lifehub-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+# Add LIFF_ID only after configuring a LINE LIFF app.
+# Add PUBLIC_BASE_URL after deploying (for webhook and LIFF endpoint settings).

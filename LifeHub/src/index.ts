@@ -1,0 +1,99 @@
+export interface Env {
+  DB: D1Database; ASSETS: Fetcher; LIFF_ID?: string; LINE_CHANNEL_ID?: string;
+  LINE_CHANNEL_SECRET?: string; LINE_CHANNEL_ACCESS_TOKEN?: string; PUBLIC_BASE_URL?: string;
+}
+type Ctx = { userId: string; demo: boolean };
+const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+const id = () => crypto.randomUUID();
+const day = () => new Date().toISOString().slice(0, 10);
+const month = () => new Date().toISOString().slice(0, 7);
+const fail = (message: string, status = 400) => json({ error: message }, status);
+async function authenticate(req: Request, env: Env): Promise<Ctx | Response> {
+  const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) return fail('請先登入 LIFF 或啟用本機 Demo。', 401);
+  if (!env.LINE_CHANNEL_ID) {
+    if (token !== 'lifehub-local-demo-token') return fail('本機 Demo token 無效。', 401);
+    return { userId: 'local-demo-user', demo: true };
+  }
+  const form = new URLSearchParams({ id_token: token, client_id: env.LINE_CHANNEL_ID });
+  const verify = await fetch('https://api.line.me/oauth2/v2.1/verify', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: form });
+  if (!verify.ok) return fail('LINE 身分驗證失敗，請重新登入。', 401);
+  const claims = await verify.json() as { sub?: string; aud?: string; exp?: number; iss?: string };
+  if (!claims.sub || claims.aud !== env.LINE_CHANNEL_ID || (claims.exp ?? 0) <= Date.now() / 1000 || claims.iss !== 'https://access.line.me') return fail('LIFF token claims 無效。', 401);
+  return { userId: claims.sub, demo: false };
+}
+async function lineSignatureValid(raw: string, signature: string | null, secret: string): Promise<boolean> {
+  if (!signature) return false;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const digest = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw)));
+  const encoded = btoa(String.fromCharCode(...digest));
+  return encoded === signature;
+}
+const txt = (s: string) => s.trim().slice(0, 120);
+async function dataApi(req: Request, env: Env, ctx: Ctx): Promise<Response> {
+  const u = new URL(req.url), p = u.pathname.replace(/^\/api/, ''), method = req.method;
+  const db = env.DB, user = ctx.userId;
+  if (p === '/state' && method === 'GET') {
+    const [expenses, expSum, todos, waterRows, setting, shopping, habits] = await Promise.all([
+      db.prepare("SELECT id,title,amount,created_at FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at)=? ORDER BY created_at DESC LIMIT 30").bind(user, month()).all(),
+      db.prepare("SELECT COALESCE(SUM(amount),0) total FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at)=?").bind(user, month()).first<{total:number}>(),
+      db.prepare('SELECT id,title,done,created_at FROM todos WHERE user_id=? ORDER BY done,created_at DESC LIMIT 100').bind(user).all(),
+      db.prepare("SELECT COALESCE(SUM(amount),0) total FROM water_logs WHERE user_id=? AND date(created_at)=?").bind(user, day()).first<{total:number}>(),
+      db.prepare('SELECT daily_goal FROM water_settings WHERE user_id=?').bind(user).first<{daily_goal:number}>(),
+      db.prepare('SELECT id,title,checked,created_at FROM shopping_items WHERE user_id=? ORDER BY checked,created_at DESC').bind(user).all(),
+      db.prepare('SELECT id,title,created_at FROM habits WHERE user_id=? ORDER BY created_at').bind(user).all()
+    ]);
+    const enriched = await Promise.all((habits.results as {id:string;title:string;created_at:string}[]).map(async h => {
+      const logs = await db.prepare('SELECT day FROM habit_logs WHERE user_id=? AND habit_id=? ORDER BY day DESC LIMIT 400').bind(user,h.id).all<{day:string}>();
+      const dates = new Set(logs.results.map(x=>x.day)); let streak=0; const d=new Date(`${day()}T00:00:00Z`);
+      if (!dates.has(day())) d.setUTCDate(d.getUTCDate()-1);
+      while (dates.has(d.toISOString().slice(0,10))) { streak++; d.setUTCDate(d.getUTCDate()-1); }
+      return {...h, streak, checkedToday: dates.has(day())};
+    }));
+    const water = waterRows.results[0] as {total:number}; const goal=setting?.daily_goal ?? 2000;
+    return json({ demo:ctx.demo, expenses:expenses.results, expenseTotal:expSum?.total??0, todos:todos.results, waterToday:water?.total??0, waterGoal:goal, shopping:shopping.results, habits:enriched, today:day(), month:month() });
+  }
+  const body = method === 'POST' || method === 'PATCH' ? await req.json().catch(()=>null) as Record<string, unknown>|null : null;
+  if (!body && ['POST','PATCH'].includes(method)) return fail('無法讀取資料。');
+  if (p === '/expenses' && method === 'POST') { const title=txt(String(body?.title??'')), amount=Number(body?.amount); if(!title||!Number.isInteger(amount)||amount<1)return fail('請輸入項目與正整數金額。'); await db.prepare('INSERT INTO expenses(id,user_id,title,amount) VALUES(?,?,?,?)').bind(id(),user,title,amount).run(); return json({ok:true},201); }
+  if (p === '/todos' && method === 'POST') { const title=txt(String(body?.title??'')); if(!title)return fail('請輸入待辦內容。'); const item=id(); await db.prepare('INSERT INTO todos(id,user_id,title) VALUES(?,?,?)').bind(item,user,title).run(); return json({ok:true,id:item},201); }
+  if (p.startsWith('/todos/') && method === 'PATCH') { const item=p.split('/')[2]; await db.prepare('UPDATE todos SET done=? WHERE id=? AND user_id=?').bind(body?.done?1:0,item,user).run(); return json({ok:true}); }
+  if (p.startsWith('/todos/') && method === 'DELETE') { await db.prepare('DELETE FROM todos WHERE id=? AND user_id=?').bind(p.split('/')[2],user).run(); return json({ok:true}); }
+  if (p === '/water' && method === 'POST') { const amount=Number(body?.amount); if(!Number.isInteger(amount)||amount<1||amount>5000)return fail('飲水量需介於 1–5000 ml。'); await db.prepare('INSERT INTO water_logs(id,user_id,amount) VALUES(?,?,?)').bind(id(),user,amount).run(); return json({ok:true},201); }
+  if (p === '/water/goal' && method === 'PUT') { const goal=Number(body?.goal); if(!Number.isInteger(goal)||goal<250||goal>10000)return fail('目標需介於 250–10000 ml。'); await db.prepare('INSERT INTO water_settings(user_id,daily_goal) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET daily_goal=excluded.daily_goal').bind(user,goal).run(); return json({ok:true}); }
+  if (p === '/shopping' && method === 'POST') { const title=txt(String(body?.title??'')); if(!title)return fail('請輸入購物項目。'); const item=id(); await db.prepare('INSERT INTO shopping_items(id,user_id,title) VALUES(?,?,?)').bind(item,user,title).run(); return json({ok:true,id:item},201); }
+  if (p.startsWith('/shopping/') && method === 'PATCH') { await db.prepare('UPDATE shopping_items SET checked=? WHERE id=? AND user_id=?').bind(body?.checked?1:0,p.split('/')[2],user).run(); return json({ok:true}); }
+  if (p.startsWith('/shopping/') && method === 'DELETE') { await db.prepare('DELETE FROM shopping_items WHERE id=? AND user_id=?').bind(p.split('/')[2],user).run(); return json({ok:true}); }
+  if (p === '/habits' && method === 'POST') { const title=txt(String(body?.title??'')); if(!title)return fail('請輸入習慣名稱。'); try { await db.prepare('INSERT INTO habits(id,user_id,title) VALUES(?,?,?)').bind(id(),user,title).run(); } catch { return fail('這個習慣已經存在。'); } return json({ok:true},201); }
+  if (p.startsWith('/habits/') && p.endsWith('/check') && method === 'POST') { const habit=p.split('/')[2]; await db.prepare('INSERT OR IGNORE INTO habit_logs(id,habit_id,user_id,day) SELECT ?,id,?,? FROM habits WHERE id=? AND user_id=?').bind(id(),user,day(),habit,user).run(); return json({ok:true}); }
+  if (p.startsWith('/habits/') && method === 'DELETE') { await db.prepare('DELETE FROM habits WHERE id=? AND user_id=?').bind(p.split('/')[2],user).run(); return json({ok:true}); }
+  return fail('找不到此 API。',404);
+}
+async function replyLine(env:Env, token:string, message:string) {
+  if(!env.LINE_CHANNEL_ACCESS_TOKEN)return;
+  await fetch('https://api.line.me/v2/bot/message/reply',{method:'POST',headers:{authorization:`Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({replyToken:token,messages:[{type:'text',text:message.slice(0,5000)}]})});
+}
+async function handleWebhook(req:Request,env:Env):Promise<Response>{
+  const raw=await req.text(); if(!env.LINE_CHANNEL_SECRET||!await lineSignatureValid(raw,req.headers.get('x-line-signature'),env.LINE_CHANNEL_SECRET))return fail('Invalid LINE signature',401);
+  const payload=JSON.parse(raw) as {events?:Array<{type:string;replyToken:string;source?:{userId?:string};message?:{type:string;text?:string}}>};
+  for(const e of payload.events??[]){ if(e.type!=='message'||e.message?.type!=='text'||!e.source?.userId)continue;
+    const user=e.source.userId, input=(e.message.text??'').trim(), parts=input.split(/\s+/), command=parts.shift()??'', arg=parts.join(' '); let result='請輸入：記帳 項目 金額、待辦 內容、喝水 毫升、購物 內容、打卡 習慣名稱、今日摘要。';
+    if(command==='記帳'){const m=arg.match(/^(.+?)\s+(\d+)$/);if(m&&Number(m[2])>0){await env.DB.prepare('INSERT INTO expenses(id,user_id,title,amount) VALUES(?,?,?,?)').bind(id(),user,txt(m[1]),Number(m[2])).run();result=`已記帳：${m[1]} $${m[2]}`;}else result='格式：記帳 午餐 120';}
+    else if(command==='待辦'&&arg){await env.DB.prepare('INSERT INTO todos(id,user_id,title) VALUES(?,?,?)').bind(id(),user,txt(arg)).run();result=`已新增待辦：${arg}`;}
+    else if(command==='喝水'&&/^\d+$/.test(arg)){await env.DB.prepare('INSERT INTO water_logs(id,user_id,amount) VALUES(?,?,?)').bind(id(),user,Number(arg)).run();result=`已記錄飲水 ${arg} ml。`;}
+    else if(command==='購物'&&arg){await env.DB.prepare('INSERT INTO shopping_items(id,user_id,title) VALUES(?,?,?)').bind(id(),user,txt(arg)).run();result=`已加入購物清單：${arg}`;}
+    else if(command==='打卡'&&arg){let h=await env.DB.prepare('SELECT id FROM habits WHERE user_id=? AND title=?').bind(user,txt(arg)).first<{id:string}>();if(!h){const hid=id();await env.DB.prepare('INSERT INTO habits(id,user_id,title) VALUES(?,?,?)').bind(hid,user,txt(arg)).run();h={id:hid};}await env.DB.prepare('INSERT OR IGNORE INTO habit_logs(id,habit_id,user_id,day) VALUES(?,?,?,?)').bind(id(),h.id,user,day()).run();result=`✅ ${arg} 已完成今日打卡！`;}
+    else if(command==='今日摘要'){const [sum,todo,water,goal,habits]=await Promise.all([env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM expenses WHERE user_id=? AND strftime('%Y-%m',created_at)=?").bind(user,month()).first<{n:number}>(),env.DB.prepare('SELECT COUNT(*) n FROM todos WHERE user_id=? AND done=0').bind(user).first<{n:number}>(),env.DB.prepare("SELECT COALESCE(SUM(amount),0) n FROM water_logs WHERE user_id=? AND date(created_at)=?").bind(user,day()).first<{n:number}>(),env.DB.prepare('SELECT daily_goal n FROM water_settings WHERE user_id=?').bind(user).first<{n:number}>(),env.DB.prepare('SELECT COUNT(*) n FROM habit_logs WHERE user_id=? AND day=?').bind(user,day()).first<{n:number}>()]);result=`📊 LifeHub 今日摘要\n本月支出：$${sum?.n??0}\n待辦未完成：${todo?.n??0} 件\n今日喝水：${water?.n??0}/${goal?.n??2000} ml\n今日習慣打卡：${habits?.n??0} 次`;}
+    await replyLine(env,e.replyToken,result);
+  }
+  return new Response('OK');
+}
+export default { async fetch(req:Request,env:Env):Promise<Response>{
+  const url=new URL(req.url);
+  if(url.pathname==='/webhook'&&req.method==='POST')return handleWebhook(req,env);
+  if(url.pathname==='/health')return json({ok:true,mode:env.LINE_CHANNEL_ID?'line-auth':'local-demo'});
+  if(url.pathname==='/config.js')return new Response(`window.LIFF_ID=${JSON.stringify(env.LIFF_ID??'')};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}});
+  if(url.pathname==='/api/auth/demo'&&req.method==='POST')return env.LINE_CHANNEL_ID?fail('正式環境不提供 Demo 登入。',403):json({accessToken:'lifehub-local-demo-token',mode:'demo'});
+  if(url.pathname.startsWith('/api/')){const ctx=await authenticate(req,env);if(ctx instanceof Response)return ctx;try{return await dataApi(req,env,ctx);}catch(e){console.error(e);return fail('資料操作失敗，請確認 D1 migration 已套用。',500);}}
+  return env.ASSETS.fetch(req);
+}};
