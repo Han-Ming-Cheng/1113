@@ -10,3 +10,5 @@
 .assistant-provider-label{display:block;margin:9px 0 4px;color:#607b67;font-size:10px}.assistant-settings select{width:100%;border:1px solid #dbe6da;border-radius:8px;padding:8px;font:inherit;font-size:11px;color:#31513a;background:#fff}
 
 .assistant-custom-fields[hidden]{display:none}.assistant-custom-fields{display:grid;gap:5px;margin-top:9px}.assistant-custom-fields label{color:#607b67;font-size:10px}.assistant-custom-fields input{width:100%;min-width:0;border:1px solid #dbe6da;border-radius:8px;padding:8px;font:inherit;font-size:11px;box-sizing:border-box}
+
+.assistant-settings form[hidden]{display:none}

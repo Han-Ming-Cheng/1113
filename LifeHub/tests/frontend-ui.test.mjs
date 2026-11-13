@@ -71,8 +71,12 @@ test('assistant gives local help without a key and clears an entered key from th
     document: { querySelector: element, querySelectorAll: () => [], createElement: () => ({ className: '', textContent: '' }) },
     fetch: async (url, options) => {
       assert.equal(url, 'api/assistant');
-      assert.equal(options.headers['x-assistant-api-key'], 'sk-test-private');
-      assert.equal(JSON.parse(options.body).provider, 'openai');
+      const provider = JSON.parse(options.body).provider;
+      if (provider === 'openai') assert.equal(options.headers['x-assistant-api-key'], 'sk-test-private');
+      else {
+        assert.equal(provider, 'cloudflare');
+        assert.equal(options.headers['x-assistant-api-key'], undefined);
+      }
       return Response.json({ answer: '可以從首頁開始。' });
     },
     Response,
@@ -96,6 +100,13 @@ test('assistant gives local help without a key and clears an entered key from th
   handlers.get('#assistantForm:submit')({ preventDefault() {} });
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.match(bubbles.at(-1).textContent, /幫你記錄資料/);
+  element('#assistantProvider').value = 'cloudflare';
+  handlers.get('#assistantProvider:change')();
+  assert.equal(element('#assistantKeyForm').hidden, true);
+  element('#assistantInput').value = '可以聊天嗎？';
+  handlers.get('#assistantForm:submit')({ preventDefault() {} });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(bubbles.at(-1).textContent, '可以從首頁開始。');
 });
 
 test('assistant asks for confirmation before saving a parsed expense', async () => {

@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database; ASSETS: Fetcher; LIFF_ID?: string; LINE_CHANNEL_ID?: string;
   LINE_CHANNEL_SECRET?: string; LINE_CHANNEL_ACCESS_TOKEN?: string; PUBLIC_BASE_URL?: string;
+  AI?: {run:(model:string,options:unknown)=>Promise<unknown>};
 }
 type Ctx = { userId: string; demo: boolean };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
@@ -129,17 +130,17 @@ async function handleWebhook(req:Request,env:Env):Promise<Response>{
   }
   return new Response('OK');
 }
-async function handleAssistant(req:Request):Promise<Response>{
+async function handleAssistant(req:Request,env:Env):Promise<Response>{
   const origin=req.headers.get('origin');
   if(origin&&origin!==new URL(req.url).origin)return fail('請從 LifeHub 頁面使用小助手。',403);
   const key=req.headers.get('x-assistant-api-key')?.trim()??'';
-  if(!key||key.length>500||/[\r\n]/.test(key))return fail('請先在小助手設定所選平台的 API Key。');
   const raw=await req.text();
   if(raw.length>12000)return fail('訊息太長。',413);
   let data:{message?:unknown;history?:unknown;provider?:unknown;endpoint?:unknown;model?:unknown};
   try{data=JSON.parse(raw)}catch{return fail('訊息格式錯誤。')}
   const provider=data.provider;
-  if(provider!=='openai'&&provider!=='gemini'&&provider!=='anthropic'&&provider!=='custom')return fail('不支援的 AI 平台。');
+  if(provider!=='openai'&&provider!=='gemini'&&provider!=='anthropic'&&provider!=='custom'&&provider!=='cloudflare')return fail('不支援的 AI 平台。');
+  if(provider!=='cloudflare'&&(!key||key.length>500||/[\r\n]/.test(key)))return fail('請先在小助手設定所選平台的 API Key。');
   let customEndpoint='';
   let customModel='';
   if(provider==='custom'){
@@ -162,6 +163,19 @@ async function handleAssistant(req:Request):Promise<Response>{
   const conversation=history.map(item=>`${item.role==='user'?'使用者':'助手'}：${item.text}`).join('\n');
   const input=`${conversation?conversation+'\n':''}使用者：${message}`;
   const instructions='你是 LifeHub 五合一生活助手，請用繁體中文簡短回答。LifeHub 有記帳、待辦、喝水、購物清單、習慣打卡；使用者可點首頁卡片操作，也可在 LINE 聊天輸入指令。你只能提供說明與建議，不能宣稱已替使用者新增或修改資料。不要索取 API Key、密碼或 LINE 憑證。';
+  if(provider==='cloudflare'){
+    if(!env.AI)return fail('Cloudflare Workers AI 尚未啟用，請確認 Worker 部署包含 AI binding。',503);
+    try{
+      const result=await env.AI.run('@cf/google/gemma-4-26b-a4b-it',{
+        messages:[{role:'system',content:instructions},...history.map(item=>({role:item.role,content:item.text})),{role:'user',content:message}],
+        max_completion_tokens:500,
+        chat_template_kwargs:{enable_thinking:false},
+      }) as {response?:unknown;choices?:Array<{message?:{content?:unknown}}>};
+      const value=result?.response??result?.choices?.[0]?.message?.content;
+      const answer=typeof value==='string'?value.trim():'';
+      return answer?json({answer:answer.slice(0,3000)}):fail('Cloudflare AI 未回傳文字，請換個問法再試。',502);
+    }catch{return fail('Cloudflare AI 暫時無法回應，請稍後再試或查看每日用量。',502)}
+  }
   let upstream:Response;
   try{
     if(provider==='openai')upstream=await fetch('https://api.openai.com/v1/responses',{
@@ -218,13 +232,14 @@ async function handleAssistant(req:Request):Promise<Response>{
 export default { async fetch(req:Request,env:Env):Promise<Response>{
   const url=new URL(req.url);
   if(url.pathname==='/webhook'&&req.method==='POST')return handleWebhook(req,env);
-  if(url.pathname==='/api/assistant'&&req.method==='POST')return handleAssistant(req);
+  if(url.pathname==='/api/assistant'&&req.method==='POST')return handleAssistant(req,env);
   if(url.pathname==='/health')return json({
     ok:true,
     diagnosticVersion:'bindings-20261113',
     mode:env.LINE_CHANNEL_ID?'line-auth':isLocal(req)?'local-demo':'unconfigured',
     liffConfigured:!!env.LIFF_ID,
     messagingConfigured:!!(env.LINE_CHANNEL_SECRET&&env.LINE_CHANNEL_ACCESS_TOKEN),
+    aiConfigured:!!env.AI,
     bindings:{
       LINE_CHANNEL_ID:!!env.LINE_CHANNEL_ID,
       LINE_CHANNEL_SECRET:!!env.LINE_CHANNEL_SECRET,

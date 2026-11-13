@@ -5,7 +5,7 @@
   const messages = get('#assistantMessages');
   const input = get('#assistantInput');
   const providerSelect = get('#assistantProvider');
-  const providerNames = { openai: 'OpenAI', gemini: 'Google Gemini', anthropic: 'Anthropic Claude', custom: '自訂相容 API' };
+  const providerNames = { cloudflare: 'Cloudflare Workers AI', openai: 'OpenAI', gemini: 'Google Gemini', anthropic: 'Anthropic Claude', custom: '自訂相容 API' };
   let apiKey = '';
   let history = [];
   let busy = false;
@@ -70,6 +70,8 @@
         const result = await window.LifeHubRunAction(action);
         card.remove();
         bubble('bot', result);
+        history.push({ role: 'user', text: actionLabel(action) }, { role: 'assistant', text: result.slice(0, 500) });
+        history = history.slice(-6);
       } catch (error) {
         bubble('bot', error?.message || '儲存失敗，請稍後再試。');
         confirm.disabled = cancel.disabled = false;
@@ -106,7 +108,7 @@
       confirmAction(action);
       return;
     }
-    if (!apiKey || /今日摘要|今天摘要/.test(text)) {
+    if ((providerSelect.value !== 'cloudflare' && !apiKey) || /今日摘要|今天摘要/.test(text)) {
       bubble('bot', localHelp(text));
       return;
     }
@@ -116,7 +118,7 @@
     try {
       const response = await fetch('api/assistant', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-assistant-api-key': apiKey },
+        headers: { 'content-type': 'application/json', ...(providerSelect.value === 'cloudflare' ? {} : { 'x-assistant-api-key': apiKey }) },
         body: JSON.stringify({
           message: text, history: prior, provider: providerSelect.value,
           ...(providerSelect.value === 'custom' ? {
@@ -171,11 +173,15 @@
     apiKey = '';
     history = [];
     get('#assistantCustomFields').hidden = providerSelect.value !== 'custom';
+    get('#assistantKeyForm').hidden = providerSelect.value === 'cloudflare';
     get('#assistantKeyInput').value = '';
     get('#assistantKeyInput').placeholder = `貼上你的 ${providerNames[providerSelect.value]} API Key`;
-    get('#assistantKeyStatus').textContent = providerSelect.value === 'custom'
+    get('#assistantKeyStatus').textContent = providerSelect.value === 'cloudflare'
+      ? 'Cloudflare Workers AI 使用本站的 AI binding，不需要輸入 API Key。'
+      : providerSelect.value === 'custom'
       ? '請填可信任服務商的 API 網址、模型與 Key；Key 會送往該網址。'
       : `已切換到 ${providerNames[providerSelect.value]}，請輸入該平台的 API Key。`;
   });
+  get('#assistantKeyForm').hidden = providerSelect.value === 'cloudflare';
   document.querySelectorAll('[data-tip]').forEach(button => button.addEventListener('click', () => ask(button.dataset.tip)));
 })();

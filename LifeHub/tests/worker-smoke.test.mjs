@@ -236,6 +236,29 @@ test('assistant accepts a public HTTPS Chat Completions endpoint and rejects loc
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('Cloudflare Workers AI chats without a user key and receives recent turns', async () => {
+  const { env } = mockEnv();
+  const calls = [];
+  env.AI = { run: async (model, options) => { calls.push({ model, options }); return { response: '你好，我可以陪你聊天。' }; } };
+  const request = new Request('https://lifehub.test/api/assistant', {
+    method: 'POST', headers: { origin: 'https://lifehub.test' },
+    body: JSON.stringify({ provider: 'cloudflare', message: '你記得我剛剛說什麼嗎？', history: [{ role: 'user', text: '我今天喝了 300 ml' }, { role: 'assistant', text: '收到。' }] }),
+  });
+  const response = await worker.fetch(request, env);
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /陪你聊天/);
+  assert.equal(calls[0].model, '@cf/google/gemma-4-26b-a4b-it');
+  assert.equal(calls[0].options.messages[1].content, '我今天喝了 300 ml');
+  assert.equal(calls[0].options.messages[3].role, 'user');
+  const health = await worker.fetch(new Request('https://lifehub.test/health'), env);
+  assert.equal((await health.json()).aiConfigured, true);
+  delete env.AI;
+  const unavailable = await worker.fetch(new Request('https://lifehub.test/api/assistant', {
+    method: 'POST', body: JSON.stringify({ provider: 'cloudflare', message: '你好' }),
+  }), env);
+  assert.equal(unavailable.status, 503);
+});
+
 test('LIFF API uses verified LINE sub instead of submitted userId', async () => {
   const { env, statements } = mockEnv();
   env.LINE_CHANNEL_ID = 'login-channel';
