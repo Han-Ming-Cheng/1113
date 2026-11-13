@@ -6,6 +6,8 @@
 
 版本檢查：開啟 `/health`，確認 `appRevision` 為 `2026.11.13.2`，或查看首頁底部版本號。若仍是舊版，請檢查 Cloudflare Deployments 最新建置狀態。
 
+展示版驗收：在 `/?demo=1` 新增一筆記帳後，點記帳卡片，可在該筆紀錄旁看到「修改」與「刪除」；小助手的設定區預設展開，Cloudflare 選項可輸入 Account ID 與自己的 Workers AI API Token。若正式頁面沒有這些欄位，代表目前 Production 部署尚未載入此版本。
+
 作品入口：`https://lifehub-line-five-in-one.han890131.workers.dev/`；問題回報：`/report.html`；互動說明簡報：`/slides.html`。
 
 交作業可直接開啟 `https://lifehub-line-five-in-one.han890131.workers.dev/?demo=1`，強制進入五項工具的瀏覽器 Demo。若雲端部署尚未更新，也可直接開啟 `public/index.html` 體驗同一個前端 Demo；資料保存在目前瀏覽器。這些 Demo 資料不會寫入 D1。
