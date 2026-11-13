@@ -17,12 +17,26 @@ python3 local_demo.py
 
 ## Cloudflare 設定及部署
 
-1. 安裝 Node.js 20+，執行 `npm install`、`npx wrangler login`。
+1. 安裝 Node.js 22.6+（`npm test` 使用 Node 原生 TypeScript strip 測試；部署本身需 Wrangler 支援的 Node.js），執行 `npm install`、`npx wrangler login`。
 2. 建立 D1：`npx wrangler d1 create lifehub-db`，將輸出的 `database_id` 填入 `wrangler.toml`。
 3. `npm run db:local` 建本機 schema；正式環境執行 `npm run db:remote`。
 4. `npx wrangler secret put LINE_CHANNEL_ID`、`npx wrangler secret put LINE_CHANNEL_SECRET`、`npx wrangler secret put LINE_CHANNEL_ACCESS_TOKEN`，依提示輸入值。不要把秘密寫進 Git 或 `wrangler.toml`。LIFF ID 不是秘密，可在 `wrangler.toml` 的 `[vars]` 加 `LIFF_ID = "..."`。
 5. `PUBLIC_BASE_URL` 可在 `[vars]` 設為部署網址，用於文件參照；應用不依賴它生成回呼網址。
 6. `npm run deploy`。Worker 免費方案含 D1/Workers 免費用量限制，供小規模展示；請在 Cloudflare 儀表板檢查當期配額。
+
+### 從 GitHub 部署完整 Worker
+
+此 repo 同時保留原有根目錄網站。LifeHub Worker 的 Wrangler 設定位於 `LifeHub/wrangler.toml`，請建立一個**新的** Worker，不要把舊的 `1113` 靜態網站改成 LifeHub：
+
+- Repository：`Han-Ming-Cheng/1113`；Branch：`main`
+- Root directory：`LifeHub`（不可選 repo 根目錄）
+- Worker name：`lifehub-line-five-in-one`
+- Build command：`npm run build`（會執行 TypeScript typecheck）
+- Deploy command：`npm run deploy`
+
+`wrangler.toml` 的 `main = "src/index.ts"` 指向 Worker `fetch()` 入口；`[assets]` 使用 `./public`，binding 為 `ASSETS`；D1 binding 為 `DB`。`run_worker_first` 會將 `/api/*`、`/health`、`/webhook`、`/config.js` 交給 Worker 程式處理，其他靜態檔由 Workers Assets 提供。後端路由在 `src/index.ts`。
+
+設定完成後先手動 Redeploy 一次，再開啟 `<worker-url>/health`；尚未設定 LINE channel 時會回報 `local-demo`。部署後若 D1 初始化 SQL 已在 Cloudflare Console 執行，就不需重建資料庫。
 
 ## LINE Developers 設定
 
@@ -54,5 +68,7 @@ Webhook 來源 userId 是 LINE 簽章驗證過的事件來源；各筆資料均�
 本機 UI：啟動後新增支出並查看本月合計；新增/完成/刪除待辦；記錄飲水、改目標、確認進度；新增/勾選/刪除購物項目；新增習慣、打卡、查看連續天數；重整頁面確認 SQLite 保存。
 
 API 安全：未帶 Bearer token 的 `/api/state` 預期 401；本機 Demo token 只在未設 `LINE_CHANNEL_ID` 時接受；正式環境應驗證無效/過期/不同 audience 的 LIFF token 為 401。Webhook 用錯誤簽章預期 401；正確簽章才會處理事件。用兩個 LINE 帳號各新增資料，確認彼此看不到對方資料。
+
+自動化本機測試：`npm test`（測試 Demo API 與 Worker fetch/API 路由，包括 D1 的喝水目標 PUT）；`npm run typecheck`；`npm run build`。Cloudflare Worker 真正的遠端部署仍需在 Cloudflare Workers Builds 執行並查看 build log。
 
 本機 Python Demo 可離線啟動。雲端部署、LINE 身分驗證與 Messaging API 尚未驗證；需在具備 npm registry 網路（或改用本機 Python Demo）、LINE 憑證與 Cloudflare 授權的環境執行上述步驟。

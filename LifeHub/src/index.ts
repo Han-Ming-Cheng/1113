@@ -53,8 +53,8 @@ async function dataApi(req: Request, env: Env, ctx: Ctx): Promise<Response> {
     const water = waterRows.results[0] as {total:number}; const goal=setting?.daily_goal ?? 2000;
     return json({ demo:ctx.demo, expenses:expenses.results, expenseTotal:expSum?.total??0, todos:todos.results, waterToday:water?.total??0, waterGoal:goal, shopping:shopping.results, habits:enriched, today:day(), month:month() });
   }
-  const body = method === 'POST' || method === 'PATCH' ? await req.json().catch(()=>null) as Record<string, unknown>|null : null;
-  if (!body && ['POST','PATCH'].includes(method)) return fail('無法讀取資料。');
+  const body = ['POST','PATCH','PUT'].includes(method) ? await req.json().catch(()=>null) as Record<string, unknown>|null : null;
+  if (!body && ['POST','PATCH','PUT'].includes(method)) return fail('無法讀取資料。');
   if (p === '/expenses' && method === 'POST') { const title=txt(String(body?.title??'')), amount=Number(body?.amount); if(!title||!Number.isInteger(amount)||amount<1)return fail('請輸入項目與正整數金額。'); await db.prepare('INSERT INTO expenses(id,user_id,title,amount) VALUES(?,?,?,?)').bind(id(),user,title,amount).run(); return json({ok:true},201); }
   if (p === '/todos' && method === 'POST') { const title=txt(String(body?.title??'')); if(!title)return fail('請輸入待辦內容。'); const item=id(); await db.prepare('INSERT INTO todos(id,user_id,title) VALUES(?,?,?)').bind(item,user,title).run(); return json({ok:true,id:item},201); }
   if (p.startsWith('/todos/') && method === 'PATCH') { const item=p.split('/')[2]; await db.prepare('UPDATE todos SET done=? WHERE id=? AND user_id=?').bind(body?.done?1:0,item,user).run(); return json({ok:true}); }
