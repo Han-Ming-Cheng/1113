@@ -10,9 +10,9 @@
 
 ## LifeHub 小助手
 
-主畫面右下角的「✳ 小助手」可自由聊天、回答五個工具的操作問題、查詢目前畫面的今日摘要，也能替使用者新增資料。Cloudflare Workers AI 預設免 Key，聊天會帶上最近六則問答作為上下文。輸入 `記帳 午餐 120`、`待辦 買牛奶`、`喝水 300`、`購物 雞蛋`、`新增習慣 運動`、`打卡 運動` 或 `設定喝水目標 2000`，確認預覽後才會寫入目前模式的資料來源。瀏覽器 Demo 寫入目前瀏覽器；LINE 驗證模式寫入 D1。這些指令不需要任何 AI 平台的 API Key。
+主畫面右下角的「✳ 小助手」可自由聊天、回答五個工具的操作問題、查詢目前畫面的今日摘要，也能替使用者新增資料。設定任一平台的憑證後可聊天，聊天會帶上最近六則問答作為上下文。輸入 `記帳 午餐 120`、`待辦 買牛奶`、`喝水 300`、`購物 雞蛋`、`新增習慣 運動`、`打卡 運動` 或 `設定喝水目標 2000`，確認預覽後才會寫入目前模式的資料來源。瀏覽器 Demo 寫入目前瀏覽器；LINE 驗證模式寫入 D1。這些指令不需要任何 AI 平台的 API Key。記帳紀錄若填錯，可在記帳介面按「刪除」並確認；本月總額會立即重算。
 
-展開「選擇 AI 平台（Cloudflare 免 Key）」後，預設使用 Cloudflare Workers AI 的 `AI` binding（模型 `@cf/google/gemma-4-26b-a4b-it`），不需要使用者輸入 API Key；也可選 OpenAI（`gpt-6-luna`）、Google Gemini（`gemini-3.8-flash`）、Anthropic Claude（`claude-haiku-5-5`），或「自訂相容 API」。自訂選項須填服務商提供的 HTTPS Chat Completions 網址（以 `/chat/completions` 結尾）、模型名稱與該服務商的 Key；採用其他協定的服務不能只靠貼 Key 使用。選用 Cloudflare Workers AI 時，必須在此 Worker 的 Wrangler 設定中保留 `[ai] binding = "AI"`，且帳號有可用的 Workers AI 額度；其他平台需輸入對應 Key 才能自由提問。Key 僅存在目前頁面的記憶體，重新整理即清除，不寫入 Git、D1、localStorage 或網址。請求由 Worker 轉送，回應不儲存；沒有 Key 時仍可使用內建操作說明及確認後寫入資料。AI 平台目前僅有 Mock 測試，尚未在正式站驗證 Workers AI binding 或真實第三方 Key。
+展開「選擇 AI 平台並設定自己的 Key」後，可選 OpenAI（`gpt-6-luna`）、Google Gemini（`gemini-3.8-flash`）、Anthropic Claude（`claude-haiku-5-5`）、Cloudflare Workers AI（`@cf/google/gemma-4-26b-a4b-it`），或「自訂相容 API」。Cloudflare 選項需輸入自己的 **Account ID** 與 **Workers AI API Token**；請在 Cloudflare Dashboard 的 Workers AI → Use REST API 建立專用 Token。其他平台需各自的 Key。自訂選項須填服務商提供的 HTTPS Chat Completions 網址（以 `/chat/completions` 結尾）、模型名稱與 Key。Key／Token 僅存在目前頁面的記憶體，重新整理即清除，不寫入 Git、D1、localStorage 或網址。聊天經 Worker 轉送至所選服務，帶上最近六則對話；未設定憑證時仍可使用基本操作說明與確認後寫入資料。四個平台目前僅有 Mock 測試，尚未在正式站使用真實憑證驗證。
 
 ## 本機 Demo（零 npm 依賴）
 

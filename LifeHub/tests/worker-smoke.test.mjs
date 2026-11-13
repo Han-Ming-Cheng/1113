@@ -83,6 +83,7 @@ test('five tool API mutations reach D1, including PUT water goal', async () => {
   const { env, statements } = mockEnv();
   const operations = [
     ['/api/expenses', 'POST', { title: '午餐', amount: 120 }, 201],
+    ['/api/expenses/expense-1', 'DELETE', undefined, 200],
     ['/api/todos', 'POST', { title: '買牛奶' }, 201],
     ['/api/todos/todo-1', 'PATCH', { done: true }, 200],
     ['/api/todos/todo-1', 'DELETE', undefined, 200],
@@ -101,6 +102,7 @@ test('five tool API mutations reach D1, including PUT water goal', async () => {
   assert.ok(statements.some(s => s.sql.includes('water_settings') && s.values.includes(2200)),
     'PUT /api/water/goal must persist its submitted goal');
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO expenses')));
+  assert.ok(statements.some(s => s.sql.includes('DELETE FROM expenses WHERE id=? AND user_id=?') && s.values[0] === 'expense-1' && s.values[1] === 'local-demo-user'));
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO todos')));
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO water_logs')));
   assert.ok(statements.some(s => s.sql.includes('INSERT INTO shopping_items')));
@@ -236,27 +238,35 @@ test('assistant accepts a public HTTPS Chat Completions endpoint and rejects loc
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test('Cloudflare Workers AI chats without a user key and receives recent turns', async () => {
+test('Cloudflare Workers AI uses a user token and account ID for chat', async () => {
   const { env } = mockEnv();
   const calls = [];
-  env.AI = { run: async (model, options) => { calls.push({ model, options }); return { response: '你好，我可以陪你聊天。' }; } };
-  const request = new Request('https://lifehub.test/api/assistant', {
-    method: 'POST', headers: { origin: 'https://lifehub.test' },
-    body: JSON.stringify({ provider: 'cloudflare', message: '你記得我剛剛說什麼嗎？', history: [{ role: 'user', text: '我今天喝了 300 ml' }, { role: 'assistant', text: '收到。' }] }),
-  });
-  const response = await worker.fetch(request, env);
-  assert.equal(response.status, 200);
-  assert.match(await response.text(), /陪你聊天/);
-  assert.equal(calls[0].model, '@cf/google/gemma-4-26b-a4b-it');
-  assert.equal(calls[0].options.messages[1].content, '我今天喝了 300 ml');
-  assert.equal(calls[0].options.messages[3].role, 'user');
-  const health = await worker.fetch(new Request('https://lifehub.test/health'), env);
-  assert.equal((await health.json()).aiConfigured, true);
-  delete env.AI;
-  const unavailable = await worker.fetch(new Request('https://lifehub.test/api/assistant', {
-    method: 'POST', body: JSON.stringify({ provider: 'cloudflare', message: '你好' }),
-  }), env);
-  assert.equal(unavailable.status, 503);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (target, options) => {
+    calls.push({ target, options });
+    return Response.json({ success: true, result: { response: '你好，我可以陪你聊天。' } });
+  };
+  const accountId = 'a'.repeat(32);
+  try {
+    const request = new Request('https://lifehub.test/api/assistant', {
+      method: 'POST', headers: { origin: 'https://lifehub.test', 'x-assistant-api-key': 'cf-test-token' },
+      body: JSON.stringify({ provider: 'cloudflare', accountId, message: '你記得我剛剛說什麼嗎？', history: [{ role: 'user', text: '我今天喝了 300 ml' }, { role: 'assistant', text: '收到。' }] }),
+    });
+    const response = await worker.fetch(request, env);
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), /陪你聊天/);
+    assert.equal(calls[0].target, `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/google/gemma-4-26b-a4b-it`);
+    assert.equal(calls[0].options.headers.authorization, 'Bearer cf-test-token');
+    const body = JSON.parse(calls[0].options.body);
+    assert.equal(body.messages[1].content, '我今天喝了 300 ml');
+    assert.equal(body.messages[3].role, 'user');
+    const invalid = await worker.fetch(new Request('https://lifehub.test/api/assistant', {
+      method: 'POST', headers: { 'x-assistant-api-key': 'cf-test-token' },
+      body: JSON.stringify({ provider: 'cloudflare', accountId: 'invalid', message: '你好' }),
+    }), env);
+    assert.equal(invalid.status, 400);
+    assert.equal(calls.length, 1);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('LIFF API uses verified LINE sub instead of submitted userId', async () => {

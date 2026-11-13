@@ -51,6 +51,7 @@ class LocalDemoApiTests(unittest.TestCase):
         self.assertEqual(self.call_api('POST', '/habits', {'title': '運動'})[0], 201)
 
         state = self.call_api('GET', '/state')[1]
+        expense_id = next(row['id'] for row in state['expenses'] if row['title'] == '午餐')
         todo_id = next(row['id'] for row in state['todos'] if row['title'] == '買牛奶')
         shopping_id = next(row['id'] for row in state['shopping'] if row['title'] == '雞蛋')
         habit_id = next(row['id'] for row in state['habits'] if row['title'] == '運動')
@@ -69,6 +70,8 @@ class LocalDemoApiTests(unittest.TestCase):
         self.assertTrue(habit['checkedToday'])
         self.assertEqual(habit['streak'], 1)
 
+        self.assertEqual(self.call_api('DELETE', f'/expenses/{expense_id}')[0], 200)
+        self.assertEqual(self.call_api('GET', '/state')[1]['expenseTotal'], 0)
         self.assertEqual(self.call_api('DELETE', f'/todos/{todo_id}')[0], 200)
         self.assertEqual(self.call_api('DELETE', f'/shopping/{shopping_id}')[0], 200)
         self.assertEqual(self.call_api('DELETE', f'/habits/{habit_id}')[0], 200)

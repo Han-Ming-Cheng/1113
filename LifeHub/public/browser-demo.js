@@ -61,6 +61,8 @@
       const amount = Number(body.amount);
       if (!itemTitle || !Number.isSafeInteger(amount) || amount < 1) throw Error('請輸入項目與正整數金額。');
       data.expenses.push({ id: id(), title: itemTitle, amount, day: day(), created_at: stamp() });
+    } else if (collection === 'expenses' && method === 'DELETE') {
+      data.expenses = data.expenses.filter(row => row.id !== itemId);
     } else if (collection === 'todos' && method === 'POST') {
       if (!itemTitle) throw Error('請輸入待辦內容。');
       data.todos.push({ id: id(), title: itemTitle, done: 0, created_at: stamp() });

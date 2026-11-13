@@ -12,3 +12,7 @@
 .assistant-custom-fields[hidden]{display:none}.assistant-custom-fields{display:grid;gap:5px;margin-top:9px}.assistant-custom-fields label{color:#607b67;font-size:10px}.assistant-custom-fields input{width:100%;min-width:0;border:1px solid #dbe6da;border-radius:8px;padding:8px;font:inherit;font-size:11px;box-sizing:border-box}
 
 .assistant-settings form[hidden]{display:none}
+
+.expense-delete{font:inherit;font-size:11px;color:#a35f56;background:#fff1ef;border-radius:8px;padding:5px 8px;white-space:nowrap}.expense-delete:hover{background:#f9e5e1}
+
+.expense-row .label{min-width:0;overflow-wrap:anywhere}.expense-row b{white-space:nowrap}

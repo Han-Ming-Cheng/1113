@@ -14,6 +14,7 @@ test('homepage opens a tool in browser Demo and links to the report form', async
   assert.match(html, /id="assistantLauncher"/);
   assert.match(html, /href="report\.html">填寫問題回報/);
   const handlers = new Map(), elements = new Map(), storage = new Map();
+  let confirmDelete = false;
   function element(selector) {
     if (!elements.has(selector)) elements.set(selector, {
       hidden: selector === '#modal' || selector === '#errorNotice',
@@ -25,7 +26,7 @@ test('homepage opens a tool in browser Demo and links to the report form', async
     return elements.get(selector);
   }
   const context = vm.createContext({
-    window: { LIFF_ID: 'configured-liff-id', LIFEHUB_AUTH_READY: true, addEventListener() {}, scrollTo() {} },
+    window: { LIFF_ID: 'configured-liff-id', LIFEHUB_AUTH_READY: true, addEventListener() {}, scrollTo() {}, confirm: () => confirmDelete },
     document: { querySelector: element, addEventListener() {} },
     location: { hostname: 'lifehub.test', search: '?demo=1', href: '/' },
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
@@ -51,6 +52,16 @@ test('homepage opens a tool in browser Demo and links to the report form', async
   assert.equal(updated.waterToday, 300);
   assert.equal(updated.shopping[0].title, '雞蛋');
   assert.equal(updated.habits[0].checkedToday, true);
+  handlers.get('#cards:click')({ target: { closest: () => ({ dataset: { tool: 'expense' } }) } });
+  assert.match(element('#sheetContent').innerHTML, /data-delete="expense"/);
+  const expenseId = updated.expenses[0].id;
+  const deleteEvent = { target: { closest: selector => selector === '[data-delete]' ? { dataset: { delete: 'expense', id: expenseId } } : null } };
+  handlers.get('#modal:click')(deleteEvent);
+  assert.equal(vm.runInContext('state.expenseTotal', context), 120);
+  confirmDelete = true;
+  handlers.get('#modal:click')(deleteEvent);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(vm.runInContext('state.expenseTotal', context), 0);
 });
 
 test('assistant gives local help without a key and clears an entered key from the field', async () => {
@@ -75,7 +86,8 @@ test('assistant gives local help without a key and clears an entered key from th
       if (provider === 'openai') assert.equal(options.headers['x-assistant-api-key'], 'sk-test-private');
       else {
         assert.equal(provider, 'cloudflare');
-        assert.equal(options.headers['x-assistant-api-key'], undefined);
+        assert.equal(options.headers['x-assistant-api-key'], 'cf-test-token');
+        assert.equal(JSON.parse(options.body).accountId, 'a'.repeat(32));
       }
       return Response.json({ answer: '可以從首頁開始。' });
     },
@@ -102,7 +114,10 @@ test('assistant gives local help without a key and clears an entered key from th
   assert.match(bubbles.at(-1).textContent, /幫你記錄資料/);
   element('#assistantProvider').value = 'cloudflare';
   handlers.get('#assistantProvider:change')();
-  assert.equal(element('#assistantKeyForm').hidden, true);
+  assert.equal(element('#assistantCloudflareFields').hidden, false);
+  element('#assistantAccountId').value = 'a'.repeat(32);
+  element('#assistantKeyInput').value = 'cf-test-token';
+  handlers.get('#assistantKeyForm:submit')({ preventDefault() {} });
   element('#assistantInput').value = '可以聊天嗎？';
   handlers.get('#assistantForm:submit')({ preventDefault() {} });
   await new Promise(resolve => setTimeout(resolve, 0));
