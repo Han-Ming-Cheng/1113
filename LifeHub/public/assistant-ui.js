@@ -5,7 +5,7 @@
   const messages = get('#assistantMessages');
   const input = get('#assistantInput');
   const providerSelect = get('#assistantProvider');
-  const providerNames = { openai: 'OpenAI', gemini: 'Google Gemini', anthropic: 'Anthropic Claude' };
+  const providerNames = { openai: 'OpenAI', gemini: 'Google Gemini', anthropic: 'Anthropic Claude', custom: '自訂相容 API' };
   let apiKey = '';
   let history = [];
   let busy = false;
@@ -117,7 +117,13 @@
       const response = await fetch('api/assistant', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-assistant-api-key': apiKey },
-        body: JSON.stringify({ message: text, history: prior, provider: providerSelect.value }),
+        body: JSON.stringify({
+          message: text, history: prior, provider: providerSelect.value,
+          ...(providerSelect.value === 'custom' ? {
+            endpoint: get('#assistantEndpoint').value.trim(),
+            model: get('#assistantModel').value.trim(),
+          } : {}),
+        }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(result.error || '小助手暫時無法回應。');
@@ -146,6 +152,10 @@
       get('#assistantKeyStatus').textContent = '請先輸入 API Key。';
       return;
     }
+    if (providerSelect.value === 'custom' && (!get('#assistantEndpoint').value.trim() || !get('#assistantModel').value.trim())) {
+      get('#assistantKeyStatus').textContent = '請先填寫 API 網址和模型名稱。';
+      return;
+    }
     apiKey = value;
     field.value = '';
     history = [];
@@ -160,9 +170,12 @@
   providerSelect.addEventListener('change', () => {
     apiKey = '';
     history = [];
+    get('#assistantCustomFields').hidden = providerSelect.value !== 'custom';
     get('#assistantKeyInput').value = '';
     get('#assistantKeyInput').placeholder = `貼上你的 ${providerNames[providerSelect.value]} API Key`;
-    get('#assistantKeyStatus').textContent = `已切換到 ${providerNames[providerSelect.value]}，請輸入該平台的 API Key。`;
+    get('#assistantKeyStatus').textContent = providerSelect.value === 'custom'
+      ? '請填可信任服務商的 API 網址、模型與 Key；Key 會送往該網址。'
+      : `已切換到 ${providerNames[providerSelect.value]}，請輸入該平台的 API Key。`;
   });
   document.querySelectorAll('[data-tip]').forEach(button => button.addEventListener('click', () => ask(button.dataset.tip)));
 })();

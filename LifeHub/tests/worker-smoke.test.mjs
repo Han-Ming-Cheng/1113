@@ -208,6 +208,34 @@ test('assistant supports Gemini and Claude with fixed upstream hosts', async () 
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('assistant accepts a public HTTPS Chat Completions endpoint and rejects local targets', async () => {
+  const { env } = mockEnv();
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (target, options) => {
+    calls.push({ target, options });
+    return Response.json({ choices: [{ message: { content: '相容 API 回答' } }] });
+  };
+  const request = (endpoint, model = 'demo-model') => new Request('https://lifehub.test/api/assistant', {
+    method: 'POST', headers: { 'x-assistant-api-key': 'private-test-key' },
+    body: JSON.stringify({ provider: 'custom', endpoint, model, message: '如何記帳？' }),
+  });
+  try {
+    const response = await worker.fetch(request('https://api.example.com/v1/chat/completions'), env);
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), /相容 API 回答/);
+    assert.equal(calls[0].target, 'https://api.example.com/v1/chat/completions');
+    assert.equal(calls[0].options.redirect, 'error');
+    assert.equal(calls[0].options.headers.authorization, 'Bearer private-test-key');
+    assert.equal(JSON.parse(calls[0].options.body).model, 'demo-model');
+    for (const endpoint of ['http://api.example.com/v1/chat/completions', 'https://localhost/v1/chat/completions', 'https://127.0.0.1/v1/chat/completions', 'https://api.example.com/other']) {
+      const rejected = await worker.fetch(request(endpoint), env);
+      assert.equal(rejected.status, 400);
+    }
+    assert.equal(calls.length, 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('LIFF API uses verified LINE sub instead of submitted userId', async () => {
   const { env, statements } = mockEnv();
   env.LINE_CHANNEL_ID = 'login-channel';

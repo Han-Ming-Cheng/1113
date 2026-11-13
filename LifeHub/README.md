@@ -12,7 +12,7 @@
 
 主畫面右下角的「✳ 小助手」可回答五個工具的操作問題、查詢目前畫面的今日摘要，也能替使用者新增資料。輸入 `記帳 午餐 120`、`待辦 買牛奶`、`喝水 300`、`購物 雞蛋`、`新增習慣 運動`、`打卡 運動` 或 `設定喝水目標 2000`，確認預覽後才會寫入目前模式的資料來源。瀏覽器 Demo 寫入目前瀏覽器；LINE 驗證模式寫入 D1。這些指令不需要任何 AI 平台的 API Key。
 
-展開「選擇 AI 平台並設定自己的 API Key」後，可選 OpenAI（`gpt-6-luna`）、Google Gemini（`gemini-3.8-flash`）或 Anthropic Claude（`claude-haiku-5-5`）。輸入所選平台的 Key，即可透過 Worker 自由提問。Key 僅存在目前頁面的記憶體，重新整理即清除，不寫入 Git、D1、localStorage 或網址。請求由 Worker 轉送，回應不儲存；沒有 Key 時仍可使用內建操作說明及確認後寫入資料。三種平台目前僅有 Mock 測試，尚未使用真實 Key 在正式站驗證。
+展開「選擇 AI 平台並設定自己的 API Key」後，可選 OpenAI（`gpt-6-luna`）、Google Gemini（`gemini-3.8-flash`）、Anthropic Claude（`claude-haiku-5-5`），或「自訂相容 API」。自訂選項須填服務商提供的 HTTPS Chat Completions 網址（以 `/chat/completions` 結尾）、模型名稱與該服務商的 Key；採用其他協定的服務不能只靠貼 Key 使用。輸入所選平台的 Key，即可透過 Worker 自由提問。Key 僅存在目前頁面的記憶體，重新整理即清除，不寫入 Git、D1、localStorage 或網址。請求由 Worker 轉送，回應不儲存；沒有 Key 時仍可使用內建操作說明及確認後寫入資料。AI 平台目前僅有 Mock 測試，尚未使用真實 Key 在正式站驗證。
 
 ## 本機 Demo（零 npm 依賴）
 

@@ -136,10 +136,22 @@ async function handleAssistant(req:Request):Promise<Response>{
   if(!key||key.length>500||/[\r\n]/.test(key))return fail('請先在小助手設定所選平台的 API Key。');
   const raw=await req.text();
   if(raw.length>12000)return fail('訊息太長。',413);
-  let data:{message?:unknown;history?:unknown;provider?:unknown};
+  let data:{message?:unknown;history?:unknown;provider?:unknown;endpoint?:unknown;model?:unknown};
   try{data=JSON.parse(raw)}catch{return fail('訊息格式錯誤。')}
   const provider=data.provider;
-  if(provider!=='openai'&&provider!=='gemini'&&provider!=='anthropic')return fail('不支援的 AI 平台。');
+  if(provider!=='openai'&&provider!=='gemini'&&provider!=='anthropic'&&provider!=='custom')return fail('不支援的 AI 平台。');
+  let customEndpoint='';
+  let customModel='';
+  if(provider==='custom'){
+    if(typeof data.endpoint!=='string'||data.endpoint.length>500||typeof data.model!=='string'||data.model.length>120)return fail('請填寫相容 API 網址和模型名稱。');
+    let endpoint:URL;
+    try{endpoint=new URL(data.endpoint)}catch{return fail('相容 API 網址格式錯誤。')}
+    const host=endpoint.hostname.toLowerCase();
+    if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password||endpoint.port||endpoint.search||endpoint.hash||!host.includes('.')||host.startsWith('[')||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)||/(?:^|\.)(?:localhost|local|internal|test|invalid)$/.test(host)||!/\/chat\/completions\/?$/.test(endpoint.pathname))return fail('請填寫公開 HTTPS 網址，路徑須以 /chat/completions 結尾。');
+    customModel=data.model.trim();
+    if(!/^[A-Za-z0-9._:/-]{1,120}$/.test(customModel))return fail('模型名稱格式錯誤。');
+    customEndpoint=endpoint.href;
+  }
   const message=typeof data.message==='string'?data.message.trim():'';
   if(!message||message.length>500)return fail('請輸入 1–500 字的問題。');
   const history=Array.isArray(data.history)?data.history.slice(-6).filter((item:unknown):item is {role:string;text:string}=>{
@@ -169,13 +181,18 @@ async function handleAssistant(req:Request):Promise<Response>{
       headers:{'x-goog-api-key':key,'content-type':'application/json'},
       body:JSON.stringify({contents:[{role:'user',parts:[{text:`${instructions}\n\n${input}`}]}],generationConfig:{maxOutputTokens:500}}),
     });
-    else upstream=await fetch('https://api.anthropic.com/v1/messages',{
+    else if(provider==='anthropic')upstream=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{authorization:`Bearer ${key}`,'anthropic-version':'2026-10-21','content-type':'application/json'},
       body:JSON.stringify({model:'claude-haiku-5-5',max_tokens:500,system:instructions,messages:[{role:'user',content:input}]}),
     });
+    else upstream=await fetch(customEndpoint,{
+      method:'POST',redirect:'error',
+      headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},
+      body:JSON.stringify({model:customModel,messages:[{role:'system',content:instructions},{role:'user',content:input}],max_tokens:500}),
+    });
   }catch{return fail('AI 服務暫時無法連線，請稍後再試。',502)}
-  const providerName={openai:'OpenAI',gemini:'Gemini',anthropic:'Claude'}[provider];
+  const providerName={openai:'OpenAI',gemini:'Gemini',anthropic:'Claude',custom:'自訂 AI'}[provider];
   if(!upstream.ok){
     if(upstream.status===401||upstream.status===403)return fail(`${providerName} API Key 無效或沒有權限，請重新設定。`,401);
     if(upstream.status===429)return fail(`${providerName} 額度或速率限制已達上限。`,429);
@@ -187,12 +204,15 @@ async function handleAssistant(req:Request):Promise<Response>{
     output?:Array<{type?:string;content?:Array<{type?:string;text?:string}>}>;
     candidates?:Array<{content?:{parts?:Array<{text?:string}>}}>;
     content?:Array<{type?:string;text?:string}>;
+    choices?:Array<{message?:{content?:string}}>;
   };
   const answer=(provider==='openai'
     ?body.output?.filter(item=>item.type==='message').flatMap(item=>item.content??[]).filter(item=>item.type==='output_text').map(item=>item.text??'').join('\n')
     :provider==='gemini'
       ?body.candidates?.[0]?.content?.parts?.map(item=>item.text??'').join('\n')
-      :body.content?.filter(item=>item.type==='text').map(item=>item.text??'').join('\n'))?.trim()??'';
+      :provider==='anthropic'
+        ?body.content?.filter(item=>item.type==='text').map(item=>item.text??'').join('\n')
+        :body.choices?.[0]?.message?.content)?.trim()??'';
   return answer?json({answer:answer.slice(0,3000)}):fail('AI 未回傳文字，請換個問法再試。',502);
 }
 export default { async fetch(req:Request,env:Env):Promise<Response>{
