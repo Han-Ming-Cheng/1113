@@ -10,7 +10,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "lifehub-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "5139575f-6ae8-45ae-85a5-477aeb47d51a"
 migrations_dir = "migrations"
 
 [vars]
