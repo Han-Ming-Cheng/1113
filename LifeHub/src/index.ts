@@ -201,7 +201,7 @@ async function handleAssistant(req:Request):Promise<Response>{
       body:JSON.stringify({model:customModel,messages:[{role:'system',content:instructions},{role:'user',content:input}],max_tokens:500}),
     });
   }catch{return fail('AI 服務暫時無法連線，請稍後再試。',502)}
-  const providerName={openai:'OpenAI',gemini:'Gemini',anthropic:'Claude',custom:'自訂 AI'}[provider];
+  const providerName={openai:'OpenAI',gemini:'Gemini',anthropic:'Claude',cloudflare:'Cloudflare',custom:'自訂 AI'}[provider];
   if(!upstream.ok){
     if(upstream.status===401||upstream.status===403)return fail(`${providerName} API Key 無效或沒有權限，請重新設定。`,401);
     if(upstream.status===429)return fail(`${providerName} 額度或速率限制已達上限。`,429);
