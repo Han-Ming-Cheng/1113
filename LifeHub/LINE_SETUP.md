@@ -7,7 +7,7 @@
 1. 登入 [LINE Developers Console](https://developers.line.biz/console/)，選取已啟用 Messaging API 的官方帳號所在 **Provider**。
 2. 在同一 Provider 內新增 **LINE Login** channel，應用類型選 **Web app**，填名稱、描述、電子郵件等欄位。此 LINE Login channel 的 **Channel ID** 是下表 `LINE_CHANNEL_ID`，不是 Messaging API channel ID。
 3. 進入這個 LINE Login channel 的 **LIFF** 分頁，新增 LIFF App：Size 建議 **Full**；Endpoint URL 填 `https://lifehub-line-five-in-one.han890131.workers.dev/`；Scopes 勾 **openid** 和 **profile**。建立後複製 LIFF ID。
-4. 在新 Worker `lifehub-line-five-in-one` 的 **Settings → Variables and Secrets** 設定下表變數。`LIFF_ID` 是一般變數；`LINE_CHANNEL_ID` 可設 Secret。儲存後重新部署 Worker。
+4. 在新 Worker `lifehub-line-five-in-one` 的 **Settings → Variables and Secrets** 設定下表項目。若全部在 Dashboard 設定，`LIFF_ID` 也選 **Secret**（值本身不是機密，但 Secret 可在後續 Wrangler 部署中保留）；若要使用一般變數，請把 LIFF ID 寫入 GitHub 的 `wrangler.toml` `[vars]`。儲存後部署新版本。
 5. 開啟 `https://liff.line.me/<LIFF_ID>`，同意授權後在首頁新增一筆測試資料並重整。`/health` 的 `mode` 應為 `line-auth`。如果 `openid` 沒選，前端無法取得 ID token。
 
 LIFF 前端只傳 `liff.getIDToken()` 的原始 ID token。Worker 向 LINE 驗證端點檢查 channel ID、`sub`、`iss` 和過期時間，再以驗證後的 `sub` 查 D1。前端傳入的 `userId` 不會用於識別身分。
@@ -29,10 +29,11 @@ LIFF 前端只傳 `liff.getIDToken()` 的原始 ID token。Worker 向 LINE 驗�
 | `LINE_CHANNEL_ID` | Secret | **LINE Login** channel ID；LIFF ID token 驗證時作 `client_id` / audience |
 | `LINE_CHANNEL_SECRET` | Secret | **Messaging API** channel secret；Webhook HMAC-SHA256 驗簽 |
 | `LINE_CHANNEL_ACCESS_TOKEN` | Secret | **Messaging API** channel access token；回覆聊天訊息 |
-| `LIFF_ID` | 一般變數 | **LINE Login channel 的 LIFF App** ID；前端 `liff.init()` |
+| `LIFF_ID` | Dashboard 設 Secret；或寫入 `wrangler.toml` `[vars]` 作一般變數 | **LINE Login channel 的 LIFF App** ID；前端 `liff.init()`。ID 會送到瀏覽器，並非真正機密 |
 | `PUBLIC_BASE_URL` | 可省略 | 程式目前未使用；不是 LINE 串接的必要設定 |
 
 Secret 不放到 GitHub、README 或聊天。`wrangler.toml` 的 `[vars]` 區塊沒有寫入任何憑證。
+Cloudflare 的 Git 部署使用 Wrangler；Dashboard 上手動新增的一般變數可能在下一次部署被 Wrangler 設定覆寫。因此 LIFF ID 請依上表選擇一種可持續的設定方式。
 
 ## 4. 三格圖文選單
 
