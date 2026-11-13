@@ -44,7 +44,7 @@ test('health, static assets, auth guard and webhook signature guard', async () =
   assert.equal(health.status, 200);
   const healthData = await health.json();
   assert.equal(healthData.mode, 'local-demo');
-  assert.equal(healthData.appRevision, '2026.11.13.3');
+  assert.equal(healthData.appRevision, '2026.11.13.4');
   assert.equal(await (await call(env, '/')).text(), 'static asset');
   assert.equal((await call(env, '/api/state', 'GET', undefined, false)).status, 401);
   assert.equal((await call(env, '/webhook', 'POST', {})).status, 401);
@@ -210,6 +210,31 @@ test('assistant supports Gemini and Claude with fixed upstream hosts', async () 
       body: JSON.stringify({ provider: 'custom', message: '你好' }),
     }), env);
     assert.equal(invalid.status, 400);
+    assert.equal(calls.length, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('Cloudflare token can discover one account without an Account ID field', async () => {
+  const { env } = mockEnv();
+  const accountId = 'b'.repeat(32);
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (target, options) => {
+    calls.push({ target, options });
+    if (target === 'https://api.cloudflare.com/client/v4/accounts?per_page=50') {
+      assert.equal(options.headers.authorization, 'Bearer cf-test-token');
+      return Response.json({ success: true, result: [{ id: accountId }], result_info: { total_count: 1 } });
+    }
+    assert.equal(target, `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/google/gemma-4-26b-a4b-it`);
+    return Response.json({ success: true, result: { response: '已連接 Cloudflare' } });
+  };
+  try {
+    const response = await worker.fetch(new Request('https://lifehub.test/api/assistant', {
+      method: 'POST', headers: { 'x-assistant-api-key': 'cf-test-token' },
+      body: JSON.stringify({ provider: 'cloudflare', message: '你好' }),
+    }), env);
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), /已連接 Cloudflare/);
     assert.equal(calls.length, 2);
   } finally { globalThis.fetch = originalFetch; }
 });

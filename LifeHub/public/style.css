@@ -20,3 +20,5 @@
 .assistant-settings{max-height:48%;overflow-y:auto;flex:none}
 
 .expense-edit{padding:5px 8px!important;font-size:11px!important}.expense-edit-form input[name=amount]{max-width:105px}@media(max-width:420px){.expense-row{flex-wrap:wrap}.expense-row .label{flex-basis:55%}.expense-edit-form{flex-wrap:wrap}.expense-edit-form input[name=title]{flex-basis:100%}}
+
+.assistant-custom-fields details label{display:block;margin:8px 0 5px}.assistant-custom-fields details input{width:100%}

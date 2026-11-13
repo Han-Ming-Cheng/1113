@@ -142,8 +142,19 @@ async function handleAssistant(req:Request):Promise<Response>{
   const provider=data.provider;
   if(provider!=='openai'&&provider!=='gemini'&&provider!=='anthropic'&&provider!=='custom'&&provider!=='cloudflare')return fail('不支援的 AI 平台。');
   if(!key||key.length>500||/[\r\n]/.test(key))return fail('請先在小助手設定所選平台的 API Key 或 Token。');
-  const accountId=provider==='cloudflare'&&typeof data.accountId==='string'?data.accountId.trim():'';
-  if(provider==='cloudflare'&&!/^[a-f0-9]{32}$/i.test(accountId))return fail('請輸入 32 碼的 Cloudflare Account ID。');
+  let accountId=provider==='cloudflare'&&typeof data.accountId==='string'?data.accountId.trim():'';
+  if(provider==='cloudflare'&&accountId&&!/^[a-f0-9]{32}$/i.test(accountId))return fail('Cloudflare Account ID 應為 32 碼。');
+  if(provider==='cloudflare'&&!accountId){
+    let lookup:Response;
+    try{lookup=await fetch('https://api.cloudflare.com/client/v4/accounts?per_page=50',{headers:{authorization:`Bearer ${key}`}})}catch{return fail('無法查詢 Cloudflare 帳號，請稍後再試。',502)}
+    if(!lookup.ok)return fail('這組 Token 無法自動查詢帳號，請補填 Account ID。',400);
+    type AccountLookup={result?:Array<{id?:string}>;result_info?:{total_count?:number}};
+    let accounts:AccountLookup;
+    try{accounts=await lookup.json() as AccountLookup}catch{return fail('Cloudflare 帳號查詢回應格式錯誤。',502)}
+    const ids=(accounts.result??[]).map(item=>item.id??'').filter(id=>/^[a-f0-9]{32}$/i.test(id));
+    if(ids.length!==1||(accounts.result_info?.total_count??ids.length)!==1)return fail('無法辨識唯一的 Cloudflare 帳號，請補填 Account ID。');
+    accountId=ids[0];
+  }
   let customEndpoint='';
   let customModel='';
   if(provider==='custom'){
@@ -234,7 +245,7 @@ export default { async fetch(req:Request,env:Env):Promise<Response>{
   if(url.pathname==='/health')return json({
     ok:true,
     diagnosticVersion:'bindings-20261113',
-    appRevision:'2026.11.13.3',
+    appRevision:'2026.11.13.4',
     mode:env.LINE_CHANNEL_ID?'line-auth':isLocal(req)?'local-demo':'unconfigured',
     liffConfigured:!!env.LIFF_ID,
     messagingConfigured:!!(env.LINE_CHANNEL_SECRET&&env.LINE_CHANNEL_ACCESS_TOKEN),

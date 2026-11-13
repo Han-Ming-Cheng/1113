@@ -4,9 +4,9 @@
 
 手機優先的 LINE LIFF 生活工具作品：記帳、待辦、喝水、購物清單、習慣打卡。Cloudflare Worker 提供頁面/API/Webhook，D1 保存經 LINE 驗證使用者的正式資料。LINE 尚未設定完成時，公開首頁會啟用瀏覽器 Demo，五個工具可直接操作，資料只保存在使用者自己的瀏覽器。正式 API 不接受前端指定 userId。
 
-版本檢查：開啟 `/health`，確認 `appRevision` 為 `2026.11.13.3`，或查看首頁底部版本號。若仍是舊版，請檢查 Cloudflare Deployments 最新建置狀態。
+版本檢查：開啟 `/health`，確認 `appRevision` 為 `2026.11.13.4`，或查看首頁底部版本號。若仍是舊版，請檢查 Cloudflare Deployments 最新建置狀態。
 
-展示版驗收：在 `/?demo=1` 新增一筆記帳後，點記帳卡片，可在該筆紀錄旁看到「修改」與「刪除」；小助手的設定區預設展開，Cloudflare 選項可輸入 Account ID 與自己的 Workers AI API Token。若正式頁面沒有這些欄位，代表目前 Production 部署尚未載入此版本。
+展示版驗收：在 `/?demo=1` 新增一筆記帳後，點記帳卡片，可在該筆紀錄旁看到「修改」與「刪除」；小助手的設定區預設展開，Cloudflare 選項可直接輸入自己的 Workers AI API Token；Account ID 收在進階設定。若正式頁面沒有這些欄位，代表目前 Production 部署尚未載入此版本。
 
 作品入口：`https://lifehub-line-five-in-one.han890131.workers.dev/`；問題回報：`/report.html`；互動說明簡報：`/slides.html`。
 
@@ -16,7 +16,7 @@
 
 主畫面右下角的「✳ 小助手」可自由聊天、回答五個工具的操作問題、查詢目前畫面的今日摘要，也能替使用者新增資料。設定任一平台的憑證後可聊天，聊天會帶上最近六則問答作為上下文。輸入 `記帳 午餐 120`、`待辦 買牛奶`、`喝水 300`、`購物 雞蛋`、`新增習慣 運動`、`打卡 運動` 或 `設定喝水目標 2000`，確認預覽後才會寫入目前模式的資料來源。瀏覽器 Demo 寫入目前瀏覽器；LINE 驗證模式寫入 D1。這些指令不需要任何 AI 平台的 API Key。記帳紀錄若填錯，可在記帳介面按「修改」更正項目與金額，或按「刪除」並確認；本月總額會立即重算。
 
-首頁右下角開啟「小助手」後，憑證區會直接展開並預選 Cloudflare；填入 Account ID 和 Workers AI API Token，按「設定」即可聊天。也可選 OpenAI（`gpt-6-luna`）、Google Gemini（`gemini-3.8-flash`）、Anthropic Claude（`claude-haiku-5-5`）、Cloudflare Workers AI（`@cf/google/gemma-4-26b-a4b-it`），或「自訂相容 API」。Cloudflare 選項需輸入自己的 **Account ID** 與 **Workers AI API Token**；請在 Cloudflare Dashboard 的 Workers AI → Use REST API 建立專用 Token。其他平台需各自的 Key。自訂選項須填服務商提供的 HTTPS Chat Completions 網址（以 `/chat/completions` 結尾）、模型名稱與 Key。Key／Token 僅存在目前頁面的記憶體，重新整理即清除，不寫入 Git、D1、localStorage 或網址。聊天經 Worker 轉送至所選服務，帶上最近六則對話；未設定憑證時仍可使用基本操作說明與確認後寫入資料。四個平台目前僅有 Mock 測試，尚未在正式站使用真實憑證驗證。
+首頁右下角開啟「小助手」後，憑證區會直接展開並預選 Cloudflare；通常只要貼 Workers AI API Token，按「設定」即可聊天；自動辨識帳號失敗時再補填 Account ID。也可選 OpenAI（`gpt-6-luna`）、Google Gemini（`gemini-3.8-flash`）、Anthropic Claude（`claude-haiku-5-5`）、Cloudflare Workers AI（`@cf/google/gemma-4-26b-a4b-it`），或「自訂相容 API」。Cloudflare 選項需自己的 **Workers AI API Token**；Account ID 可先留空，若 Token 無法查詢唯一帳號再補填。請在 Cloudflare Dashboard 的 Workers AI → Use REST API 建立專用 Token。其他平台需各自的 Key。自訂選項須填服務商提供的 HTTPS Chat Completions 網址（以 `/chat/completions` 結尾）、模型名稱與 Key。Key／Token 僅存在目前頁面的記憶體，重新整理即清除，不寫入 Git、D1、localStorage 或網址。聊天經 Worker 轉送至所選服務，帶上最近六則對話；未設定憑證時仍可使用基本操作說明與確認後寫入資料。四個平台目前僅有 Mock 測試，尚未在正式站使用真實憑證驗證。
 
 ## 本機 Demo（零 npm 依賴）
 

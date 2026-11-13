@@ -13,7 +13,7 @@ test('homepage opens a tool in browser Demo and links to the report form', async
   assert.ok(html.indexOf('app.js') < html.indexOf('assistant-ui.js'));
   assert.match(html, /id="assistantLauncher"/);
   assert.match(html, /點進去可修改／刪除紀錄/);
-  assert.match(html, /版本 2026\.11\.13\.3/);
+  assert.match(html, /版本 2026\.11\.13\.4/);
   assert.match(html, /class="assistant-settings" open/);
   assert.match(html, /id="assistantCloudflareFields" class="assistant-custom-fields"/);
   assert.match(html, /id="assistantKeyInput" type="password"/);
@@ -106,7 +106,7 @@ test('assistant gives local help without a key and clears an entered key from th
       else {
         assert.equal(provider, 'cloudflare');
         assert.equal(options.headers['x-assistant-api-key'], 'cf-test-token');
-        assert.equal(JSON.parse(options.body).accountId, 'a'.repeat(32));
+        assert.equal(JSON.parse(options.body).accountId, '');
       }
       return Response.json({ answer: '可以從首頁開始。' });
     },
@@ -135,7 +135,6 @@ test('assistant gives local help without a key and clears an entered key from th
   handlers.get('#assistantProvider:change')();
   assert.equal(element('#assistantCloudflareFields').hidden, false);
   assert.match(element('#assistantKeyLabel').textContent, /Cloudflare Workers AI API Token/);
-  element('#assistantAccountId').value = 'a'.repeat(32);
   element('#assistantKeyInput').value = 'cf-test-token';
   handlers.get('#assistantKeyForm:submit')({ preventDefault() {} });
   element('#assistantInput').value = '可以聊天嗎？';

@@ -159,10 +159,6 @@
       get('#assistantKeyStatus').textContent = '請先填寫 API 網址和模型名稱。';
       return;
     }
-    if (providerSelect.value === 'cloudflare' && !get('#assistantAccountId').value.trim()) {
-      get('#assistantKeyStatus').textContent = '請先填寫 Cloudflare Account ID。';
-      return;
-    }
     apiKey = value;
     field.value = '';
     history = [];
@@ -184,7 +180,7 @@
     get('#assistantKeyInput').setAttribute('aria-label', get('#assistantKeyLabel').textContent);
     get('#assistantKeyInput').placeholder = providerSelect.value === 'cloudflare' ? '貼上 Workers AI API Token' : `貼上你的 ${providerNames[providerSelect.value]} API Key`;
     get('#assistantKeyStatus').textContent = providerSelect.value === 'cloudflare'
-      ? '請輸入自己的 Cloudflare Account ID 與 Workers AI API Token；Token 僅留在目前頁面。'
+      ? '通常只要貼 Workers AI API Token；無法自動辨識帳號時，再補填 Account ID。'
       : providerSelect.value === 'custom'
       ? '請填可信任服務商的 API 網址、模型與 Key；Key 會送往該網址。'
       : `已切換到 ${providerNames[providerSelect.value]}，請輸入該平台的 API Key。`;
